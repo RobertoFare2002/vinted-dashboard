@@ -40,7 +40,7 @@ export default function RevenueChart({ data }: Props) {
             <Tooltip
               contentStyle={{ background: "#1a1a20", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, fontSize: 13 }}
               labelStyle={{ color: "rgba(255,255,255,.8)" }}
-              formatter={(val: number) => [`€ ${val.toFixed(2)}`]}
+              formatter={(val: any) => [`€ ${Number(val).toFixed(2)}`]}
             />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12, color: "rgba(255,255,255,.6)" }} />
             <Area type="monotone" dataKey="revenue" name="Ricavi" stroke="#16c2a3" strokeWidth={2} fill="url(#gRevenue)" />
