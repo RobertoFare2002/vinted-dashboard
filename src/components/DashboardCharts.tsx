@@ -89,7 +89,7 @@ export default function DashboardCharts({ kpi, revenueByMonth, topProducts, byPr
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" />
                 <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "rgba(255,255,255,.4)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
-                <Tooltip {...tooltipStyle} formatter={(v: number) => [`€ ${fmt(v)}`]} />
+                <Tooltip {...tooltipStyle} formatter={(v: any) => [`€ ${fmt(Number(v))}`]} />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12, color: "rgba(255,255,255,.5)" }} />
                 <Area type="monotone" dataKey="ricavi"  name="Ricavi conclusi" stroke={ACCENT} strokeWidth={2} fill="url(#gR)" />
                 <Area type="monotone" dataKey="costi"   name="Costi"           stroke={DANGER} strokeWidth={2} fill="url(#gC)" />
@@ -111,7 +111,7 @@ export default function DashboardCharts({ kpi, revenueByMonth, topProducts, byPr
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" horizontal={false} />
                 <XAxis type="number" tick={{ fill: "rgba(255,255,255,.4)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
                 <YAxis type="category" dataKey="name" tick={{ fill: "rgba(255,255,255,.6)", fontSize: 12 }} axisLine={false} tickLine={false} width={110} />
-                <Tooltip {...tooltipStyle} formatter={(v: number) => [`€ ${fmt(v)}`]} />
+                <Tooltip {...tooltipStyle} formatter={(v: any) => [`€ ${fmt(Number(v))}`]} />
                 <Bar dataKey="ricavi" name="Ricavi" radius={[0, 6, 6, 0]}>
                   {byProfile.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Bar>
@@ -136,7 +136,7 @@ export default function DashboardCharts({ kpi, revenueByMonth, topProducts, byPr
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" horizontal={false} />
                 <XAxis type="number" tick={{ fill: "rgba(255,255,255,.4)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
                 <YAxis type="category" dataKey="name" tick={{ fill: "rgba(255,255,255,.6)", fontSize: 11 }} axisLine={false} tickLine={false} width={120} />
-                <Tooltip {...tooltipStyle} formatter={(v: number, name: string) => [name === "profitto" ? `€ ${fmt(v)}` : `${v}%`, name === "profitto" ? "Profitto" : "Margine"]} />
+                <Tooltip {...tooltipStyle} formatter={(v: any, name: any) => [name === "profitto" ? `€ ${fmt(Number(v))}` : `${v}%`, name === "profitto" ? "Profitto" : "Margine"]} />
                 <Bar dataKey="profitto" name="profitto" radius={[0, 6, 6, 0]}>
                   {topProducts.map((p, i) => (
                     <Cell key={i} fill={p.margine >= 100 ? ACCENT : p.margine >= 50 ? BLUE : AMBER} />
@@ -156,7 +156,7 @@ export default function DashboardCharts({ kpi, revenueByMonth, topProducts, byPr
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" />
               <XAxis dataKey="fascia" tick={{ fill: "rgba(255,255,255,.5)", fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "rgba(255,255,255,.4)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-              <Tooltip {...tooltipStyle} formatter={(v: number, name: string) => [name === "margine" ? `${v}%` : `€ ${fmt(v)}`, name === "margine" ? "Margine" : "Ricavi"]} />
+              <Tooltip {...tooltipStyle} formatter={(v: any, name: any) => [name === "margine" ? `${v}%` : `€ ${fmt(Number(v))}`, name === "margine" ? "Margine" : "Ricavi"]} />
               <Bar dataKey="margine" name="margine" radius={[6, 6, 0, 0]}>
                 {marginsByFascia.map((d, i) => (
                   <Cell key={i} fill={d.margine >= 100 ? ACCENT : d.margine >= 50 ? BLUE : AMBER} />
