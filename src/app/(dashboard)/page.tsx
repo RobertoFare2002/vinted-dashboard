@@ -28,11 +28,11 @@ export default async function DashboardPage() {
   }).length;
 
   // ── Ricavi per mese (ultimi 8 mesi) ──────────────────────────
-  const monthMap: Record<string, { revenue: number; cost: number; count: number }> = {};
+  const monthMap: Record<string, { revenue: number; cost: number; count: number; total: number }> = {};
   for (const s of sales) {
     const m = String(s.transaction_date ?? "").slice(0, 7);
     if (!m) continue;
-    if (!monthMap[m]) monthMap[m] = { revenue: 0, cost: 0, count: 0 };
+    if (!monthMap[m]) monthMap[m] = { revenue: 0, cost: 0, count: 0, total: 0 };
     if (s.status === "closed") monthMap[m].revenue += Number(s.amount ?? 0);
     monthMap[m].total = (monthMap[m].total || 0) + Number(s.amount ?? 0);
     monthMap[m].cost  += Number(s.cost ?? 0);
