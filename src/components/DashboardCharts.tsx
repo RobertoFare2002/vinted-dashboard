@@ -30,7 +30,7 @@ const tooltipStyle = {
 interface Props {
   kpi: { totalRevenue: number; totalCost: number; profit: number; avgMargin: number; totalPending: number; totalSales: number; closedSales: number; pendingSales: number; staleItems: number; stockCount: number };
   revenueByMonth: { month: string; ricavi: number; costi: number; profitto: number; vendite: number }[];
-  topProducts: { name: string; ricavo: number; margine: number }[];
+  topProducts: { name: string; profitto: number; margine: number }[];
   byProfile: { name: string; ricavi: number; vendite: number }[];
   staleStock: { name: string; days: number; cost: number; profile: string }[];
   marginsByFascia: { fascia: string; margine: number; ricavi: number }[];
