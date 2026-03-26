@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LayoutDashboard, Package, Tag, ArrowLeftRight, ShoppingBag, BarChart2, LogOut } from "lucide-react";
+import { LayoutDashboard, Package2, Tag, ShoppingBag, BarChart2, LogOut } from "lucide-react";
 
 const NAV = [
-  { href: "/",             icon: LayoutDashboard, label: "Dashboard"   },
-  { href: "/sales",        icon: ShoppingBag,     label: "Vendite"     },
-  { href: "/stock",        icon: BarChart2,        label: "Magazzino"   },
-  { href: "/templates",    icon: Tag,             label: "Template"    },
-  { href: "/transactions", icon: ArrowLeftRight,  label: "Transazioni" },
-  { href: "/inventory",    icon: Package,         label: "Inventario"  },
+  { href: "/",          icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/sales",     icon: ShoppingBag,     label: "Vendite"   },
+  { href: "/stock",     icon: BarChart2,       label: "Magazzino" },
+  { href: "/templates", icon: Tag,             label: "Template"  },
 ];
 
 export default function Sidebar({ userEmail }: { userEmail: string }) {
@@ -53,7 +51,7 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
                 display: "flex", alignItems: "center", gap: 10,
                 padding: "9px 12px", borderRadius: 10, textDecoration: "none",
                 fontSize: 13, fontWeight: active ? 600 : 400,
-                color: active ? "var(--accent)" : "rgba(255,255,255,.55)",
+                color: active ? "#16c2a3" : "rgba(255,255,255,.55)",
                 background: active ? "rgba(22,194,163,.10)" : "transparent",
                 border: active ? "1px solid rgba(22,194,163,.18)" : "1px solid transparent",
                 transition: "all .15s"
@@ -100,7 +98,7 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
               flex: 1, display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center", gap: 3,
               padding: "6px 2px", borderRadius: 10, textDecoration: "none",
-              color: active ? "var(--accent)" : "rgba(255,255,255,.4)",
+              color: active ? "#16c2a3" : "rgba(255,255,255,.4)",
               background: active ? "rgba(22,194,163,.10)" : "transparent",
               transition: "all .15s",
               fontSize: 9, fontWeight: active ? 600 : 400,
