@@ -107,12 +107,12 @@ export default async function StockPage() {
   // Aggiorna Supabase in background per i record inconsistenti
   if (toFix.length > 0) {
     for (const { id, newStatus } of toFix) {
-      supabase
-        .from("stock_log")
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .then(() => {})
-        .catch(() => {});
+      void Promise.resolve(
+        supabase
+          .from("stock_log")
+          .update({ status: newStatus, updated_at: new Date().toISOString() })
+          .eq("id", id)
+      ).catch(() => {});
     }
   }
   // ────────────────────────────────────────────────────────────────────────
