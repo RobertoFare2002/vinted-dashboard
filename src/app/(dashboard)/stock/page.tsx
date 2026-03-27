@@ -4,6 +4,8 @@
 import { createClient } from "@/lib/supabase/server";
 import StockClient from "@/components/StockClient";
 
+export const revalidate = 0; // disabilita cache Next.js
+
 type StockItem = {
   id:             string;
   name:           string | null;

@@ -4,6 +4,8 @@
 import { createClient } from "@/lib/supabase/server";
 import SalesClient from "@/components/SalesClient";
 
+export const revalidate = 0; // disabilita cache Next.js
+
 export default async function SalesPage() {
   const supabase = await createClient();
 
