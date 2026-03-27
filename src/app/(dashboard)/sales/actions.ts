@@ -103,6 +103,7 @@ export async function updateSale(id: string, input: Partial<SaleInput>) {
           .update({ status: stockStatus, updated_at: new Date().toISOString() })
           .eq("template_id_ext", saleData.template_id_ext)
           .eq("user_id", user.id);
+        // Nessun filtro sullo status attuale — aggiorna sempre
       }
 
       revalidatePath("/stock");
@@ -162,8 +163,8 @@ export async function changeSaleStatus(id: string, status: "open" | "closed") {
       .from("stock_log")
       .update({ status: stockStatus, updated_at: new Date().toISOString() })
       .eq("template_id_ext", saleData.template_id_ext)
-      .eq("user_id", user.id)
-      .eq("status", status === "open" ? "available" : "reserved"); // solo se stato coerente
+      .eq("user_id", user.id);
+    // Nessun filtro sullo status attuale — aggiorna sempre
   }
 
   revalidatePath("/sales");
