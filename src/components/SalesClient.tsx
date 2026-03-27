@@ -4,7 +4,7 @@
 import { useState, useTransition, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { deleteSale, changeSaleStatus } from "@/app/(dashboard)/sales/actions";
-import { cancelSale } from "@/app/(dashboard)/stock/actions";
+import { cancelSale, concludeSale } from "@/app/(dashboard)/stock/actions";
 
 const SaleModal = dynamic(() => import("./SaleModal"), { ssr: false });
 
@@ -108,6 +108,14 @@ export default function SalesClient({ initialSales, templates, photoMap }: Props
     setActionId(saleId);
     startTransition(async () => {
       await cancelSale({ saleId, stockId });
+      setActionId(null);
+    });
+  }
+
+  function handleConclude(saleId: string, stockId: string) {
+    setActionId(saleId);
+    startTransition(async () => {
+      await concludeSale({ saleId, stockId });
       setActionId(null);
     });
   }
@@ -313,6 +321,13 @@ export default function SalesClient({ initialSales, templates, photoMap }: Props
                 {/* Azioni mobile */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
                   <button onClick={() => setModal({ mode: "edit", sale: s })} style={actionBtnStyle} title="Modifica">✏️</button>
+                  {s.raw_data?.stock_id && s.status === "open" && (
+                    <button
+                      onClick={() => handleConclude(s.id, s.raw_data!.stock_id!)}
+                      style={{ ...actionBtnStyle, borderColor: "rgba(22,194,163,.3)", color: "#16c2a3" }}
+                      title="Concludi vendita"
+                    >✅</button>
+                  )}
                   {s.raw_data?.stock_id && (
                     <button
                       onClick={() => setConfirmCancel({ saleId: s.id, stockId: s.raw_data!.stock_id! })}
@@ -411,6 +426,13 @@ export default function SalesClient({ initialSales, templates, photoMap }: Props
                     <td style={{ padding: "13px 16px" }}>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => setModal({ mode: "edit", sale: s })} style={actionBtnStyle} title="Modifica">✏️</button>
+                        {s.raw_data?.stock_id && s.status === "open" && (
+                          <button
+                            onClick={() => handleConclude(s.id, s.raw_data!.stock_id!)}
+                            style={{ ...actionBtnStyle, borderColor: "rgba(22,194,163,.3)", color: "#16c2a3" }}
+                            title="Concludi vendita → sposta in venduto"
+                          >✅</button>
+                        )}
                         {s.raw_data?.stock_id && (
                           <button
                             onClick={() => setConfirmCancel({ saleId: s.id, stockId: s.raw_data!.stock_id! })}

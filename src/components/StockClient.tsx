@@ -27,15 +27,15 @@ type Props = {
 
 const STATUS_LABELS: Record<string, string> = {
   available: "Disponibile",
+  reserved:  "In sospeso",
   sold:      "Venduto",
-  reserved:  "Riservato",
   archived:  "Archiviato",
 };
 
 const STATUS_COLORS: Record<string, string> = {
   available: "#16c2a3",
-  sold:      "rgba(255,255,255,.3)",
   reserved:  "#f59e0b",
+  sold:      "rgba(255,255,255,.3)",
   archived:  "rgba(255,255,255,.2)",
 };
 
@@ -65,12 +65,21 @@ export default function StockClient({ initialItems, photoMap }: Props) {
 
   // KPI su tutti gli articoli (non filtrati)
   const available  = initialItems.filter(i => i.status === "available");
+  const reserved   = initialItems.filter(i => i.status === "reserved");
   const totalItems = available.reduce((s, i) => s + Number(i.quantity ?? 1), 0);
   const totalCost  = available.reduce((s, i) => s + (Number(i.purchase_price ?? 0) * Number(i.quantity ?? 1)), 0);
   const stale      = available.filter(i => {
     if (!i.purchased_at) return false;
     return Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60;
   }).length;
+
+  // KPI cards
+  const kpiItems = [
+    { label: "Disponibili",  value: String(totalItems),                color: "#16c2a3" },
+    { label: "In sospeso",   value: String(reserved.length),           color: "#f59e0b" },
+    { label: "Costo totale", value: `€ ${totalCost.toFixed(2)}`,       color: "#ff4d6d" },
+    { label: "Fermi >60gg",  value: String(stale),                     color: "#f59e0b" },
+  ];
 
   function handleDelete(id: string) {
     setConfirmDelete(null);
@@ -125,12 +134,8 @@ export default function StockClient({ initialItems, photoMap }: Props) {
       )}
 
       {/* KPI */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 20 }}>
-        {[
-          { label: "Disponibili",  value: String(totalItems),          color: "#60a5fa" },
-          { label: "Costo totale", value: `€ ${totalCost.toFixed(2)}`, color: "#ff4d6d" },
-          { label: "Fermi >60gg", value: String(stale),               color: "#f59e0b" },
-        ].map(({ label, value, color }) => (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
+        {kpiItems.map(({ label, value, color }) => (
           <div key={label} style={{
             background: "rgba(18,18,22,.9)", border: "1px solid rgba(255,255,255,.10)",
             borderRadius: 14, padding: "14px 12px"
@@ -147,8 +152,9 @@ export default function StockClient({ initialItems, photoMap }: Props) {
         <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.04)", borderRadius: 10, padding: 3 }}>
           {([
             { key: "available", label: "Disponibili" },
-            { key: "sold",      label: "Venduti" },
-            { key: "all",       label: "Tutti" },
+            { key: "reserved",  label: "In sospeso"  },
+            { key: "sold",      label: "Venduti"      },
+            { key: "all",       label: "Tutti"        },
           ]).map(({ key, label }) => (
             <button key={key} onClick={() => setFilterStatus(key)} style={{
               padding: "6px 12px", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer",
@@ -228,7 +234,7 @@ export default function StockClient({ initialItems, photoMap }: Props) {
                   <div style={{ fontWeight: 700, fontSize: 14 }}>
                     {item.purchase_price != null ? `€${Number(item.purchase_price).toFixed(2)}` : "—"}
                   </div>
-                  {!isSold && (
+                  {item.status === "available" && (
                     <button onClick={() => setSellTarget(item)} style={{
                       padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
                       border: "1px solid rgba(22,194,163,.4)", background: "rgba(22,194,163,.12)", color: "#16c2a3",
@@ -236,7 +242,12 @@ export default function StockClient({ initialItems, photoMap }: Props) {
                       Vendi
                     </button>
                   )}
-                  {isSold && (
+                  {item.status === "reserved" && (
+                    <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.3)" }}>
+                      In sospeso
+                    </span>
+                  )}
+                  {item.status === "sold" && (
                     <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)", fontWeight: 600 }}>Venduto</span>
                   )}
                 </div>
@@ -316,7 +327,7 @@ export default function StockClient({ initialItems, photoMap }: Props) {
                     </td>
                     <td style={{ padding: "13px 16px" }}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {!isSold && (
+                        {item.status === "available" && (
                           <button onClick={() => setSellTarget(item)} style={{
                             padding: "5px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
                             border: "1px solid rgba(22,194,163,.4)", background: "rgba(22,194,163,.12)", color: "#16c2a3",
@@ -324,6 +335,15 @@ export default function StockClient({ initialItems, photoMap }: Props) {
                           }}>
                             Vendi
                           </button>
+                        )}
+                        {item.status === "reserved" && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 8,
+                            color: "#f59e0b", background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.3)",
+                            whiteSpace: "nowrap"
+                          }}>
+                            In sospeso
+                          </span>
                         )}
                         <button onClick={() => setConfirmDelete(item.id)} style={{
                           padding: "5px 8px", borderRadius: 7,

@@ -12,17 +12,17 @@ async function getAuthenticatedClient() {
 }
 
 // ── VENDI articolo dal magazzino ─────────────────────────────────────────────
-// 1. Aggiorna stock_log status → "sold"
-// 2. Inserisce riga in sales_log
-// Tutto in sequenza — se uno fallisce l'altro non viene eseguito
+// 1. Aggiorna stock_log status → "reserved" (in sospeso, non ancora concluso)
+// 2. Inserisce riga in sales_log con status "open"
+// Quando la vendita viene conclusa → stock diventa "sold"
+// Quando la vendita viene annullata → stock torna "available"
 
 export async function sellStockItem(input: {
   stockId:      string;
   stockName:    string;
   purchasePrice: number;
-  externalId:   string;   // template_id_ext per il collegamento
+  externalId:   string;
   profileId:    string | null;
-  // Dati vendita
   salePrice:    number;
   buyerSeller:  string;
   saleDate:     string;
@@ -31,11 +31,11 @@ export async function sellStockItem(input: {
 }) {
   const { supabase, user } = await getAuthenticatedClient();
 
-  // Step 1: marca il pezzo come venduto nel magazzino
+  // Step 1: marca il pezzo come "reserved" (vendita in sospeso)
   const { error: stockError } = await supabase
     .from("stock_log")
     .update({
-      status:     "sold",
+      status:     "reserved",
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.stockId)
@@ -43,7 +43,7 @@ export async function sellStockItem(input: {
 
   if (stockError) throw new Error("Errore aggiornamento magazzino: " + stockError.message);
 
-  // Step 2: crea la vendita in sales_log
+  // Step 2: crea la vendita con status "open" (in sospeso)
   const { data: saleData, error: saleError } = await supabase
     .from("sales_log")
     .insert({
@@ -51,17 +51,16 @@ export async function sellStockItem(input: {
       external_id:      crypto.randomUUID(),
       type:             "sale",
       buyer_seller:     input.buyerSeller.trim() || input.stockName,
-      amount:           Number(input.salePrice)   || 0,
+      amount:           Number(input.salePrice)    || 0,
       cost:             Number(input.purchasePrice) || 0,
-      platform:         input.platform             || "vinted",
-      status:           "closed",
-      notes:            input.notes?.trim()        || null,
+      platform:         input.platform              || "vinted",
+      status:           "open",   // ← in sospeso finché non si conclude
+      notes:            input.notes?.trim()         || null,
       transaction_date: input.saleDate
         ? new Date(input.saleDate).toISOString()
         : new Date().toISOString(),
-      template_id_ext:  input.externalId           || null,
-      profile_id:       input.profileId            || null,
-      // Salva il riferimento allo stock_id per poter annullare
+      template_id_ext:  input.externalId            || null,
+      profile_id:       input.profileId             || null,
       raw_data:         JSON.stringify({ stock_id: input.stockId }),
       created_at:       new Date().toISOString(),
       updated_at:       new Date().toISOString(),
@@ -70,7 +69,7 @@ export async function sellStockItem(input: {
     .single();
 
   if (saleError) {
-    // Rollback manuale: rimetti lo stock disponibile
+    // Rollback: rimetti lo stock disponibile
     await supabase
       .from("stock_log")
       .update({ status: "available", updated_at: new Date().toISOString() })
@@ -83,6 +82,42 @@ export async function sellStockItem(input: {
   revalidatePath("/sales");
 
   return { saleId: saleData.id };
+}
+
+// ── CONCLUDI vendita → stock diventa sold ────────────────────────────────────
+
+export async function concludeSale(input: {
+  saleId:  string;
+  stockId: string;
+}) {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  // Step 1: vendita → closed
+  const { error: saleError } = await supabase
+    .from("sales_log")
+    .update({
+      status:     "closed",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.saleId)
+    .eq("user_id", user.id);
+
+  if (saleError) throw new Error("Errore conclusione vendita: " + saleError.message);
+
+  // Step 2: stock → sold
+  const { error: stockError } = await supabase
+    .from("stock_log")
+    .update({
+      status:     "sold",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.stockId)
+    .eq("user_id", user.id);
+
+  if (stockError) throw new Error("Errore aggiornamento magazzino: " + stockError.message);
+
+  revalidatePath("/stock");
+  revalidatePath("/sales");
 }
 
 // ── ANNULLA vendita → ripristina magazzino ───────────────────────────────────
