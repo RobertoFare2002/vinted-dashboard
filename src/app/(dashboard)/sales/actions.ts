@@ -72,13 +72,43 @@ export async function updateSale(id: string, input: Partial<SaleInput>) {
   if (input.template_id_ext  !== undefined) patch.template_id_ext  = input.template_id_ext || null;
   if (input.profile_id       !== undefined) patch.profile_id       = input.profile_id      || null;
 
-  const { error } = await supabase
+  const { data: saleData, error } = await supabase
     .from("sales_log")
     .update(patch)
     .eq("id", id)
-    .eq("user_id", user.id);          // RLS extra: solo i propri record
+    .eq("user_id", user.id)
+    .select("raw_data, template_id_ext, status")
+    .single();
 
   if (error) throw new Error(error.message);
+
+  // Se lo status è cambiato, aggiorna anche il magazzino collegato
+  if (input.status !== undefined && saleData) {
+    const stockStatus = input.status === "open" ? "reserved"
+                      : input.status === "closed" ? "sold"
+                      : null;
+
+    if (stockStatus) {
+      const stockId = (saleData.raw_data as { stock_id?: string } | null)?.stock_id;
+
+      if (stockId) {
+        await supabase
+          .from("stock_log")
+          .update({ status: stockStatus, updated_at: new Date().toISOString() })
+          .eq("id", stockId)
+          .eq("user_id", user.id);
+      } else if (saleData.template_id_ext) {
+        await supabase
+          .from("stock_log")
+          .update({ status: stockStatus, updated_at: new Date().toISOString() })
+          .eq("template_id_ext", saleData.template_id_ext)
+          .eq("user_id", user.id);
+      }
+
+      revalidatePath("/stock");
+    }
+  }
+
   revalidatePath("/sales");
 }
 
@@ -97,8 +127,45 @@ export async function deleteSale(id: string) {
   revalidatePath("/sales");
 }
 
-// ── CHANGE STATUS (shortcut) ─────────────────────────────────────────────────
+// ── CHANGE STATUS — aggiorna vendita E magazzino collegato ───────────────────
 
 export async function changeSaleStatus(id: string, status: "open" | "closed") {
-  return updateSale(id, { status });
+  const { supabase, user } = await getAuthenticatedClient();
+
+  // 1. Aggiorna stato vendita
+  const { data: saleData, error: saleError } = await supabase
+    .from("sales_log")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("raw_data, template_id_ext")
+    .single();
+
+  if (saleError) throw new Error(saleError.message);
+
+  // 2. Aggiorna magazzino collegato (se esiste)
+  const stockStatus = status === "open" ? "reserved" : "sold";
+
+  // Collegamento diretto via stock_id
+  const stockId = (saleData?.raw_data as { stock_id?: string } | null)?.stock_id;
+  if (stockId) {
+    await supabase
+      .from("stock_log")
+      .update({ status: stockStatus, updated_at: new Date().toISOString() })
+      .eq("id", stockId)
+      .eq("user_id", user.id);
+  }
+
+  // Fallback: collegamento via template_id_ext
+  if (!stockId && saleData?.template_id_ext) {
+    await supabase
+      .from("stock_log")
+      .update({ status: stockStatus, updated_at: new Date().toISOString() })
+      .eq("template_id_ext", saleData.template_id_ext)
+      .eq("user_id", user.id)
+      .eq("status", status === "open" ? "available" : "reserved"); // solo se stato coerente
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/stock");
 }
