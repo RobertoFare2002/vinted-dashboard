@@ -34,7 +34,7 @@ const SALE_TO_STOCK: Record<string, string> = {
 export default async function StockPage() {
   const supabase = await createClient();
 
-  const [{ data: stockData }, { data: templatesData }, { data: salesData }] =
+  const [{ data: stockData }, { data: templatesData }, { data: salesData }, { data: profilesData }] =
     await Promise.all([
       supabase
         .from("stock_log")
@@ -46,11 +46,19 @@ export default async function StockPage() {
       supabase
         .from("sales_log")
         .select("id,status,template_id_ext,raw_data"),
+      supabase
+        .from("profiles")
+        .select("id,name"),
     ]);
 
   let items       = (stockData     ?? []) as StockItem[];
   const templates = (templatesData ?? []) as { id: string; name: string; photo_urls: string[] | null }[];
   const sales     = (salesData     ?? []) as SaleRow[];
+  const profiles  = (profilesData  ?? []) as { id: string; name: string }[];
+
+  // Mappa profile_id → nome
+  const profileMap: Record<string, string> = {};
+  for (const p of profiles) profileMap[p.id] = p.name;
 
   // ── Riconciliazione stato ────────────────────────────────────────────────
   //
@@ -137,7 +145,7 @@ export default async function StockPage() {
           {available} disponibili · {reserved} in sospeso · {sold} venduti · {items.length} totali
         </p>
       </div>
-      <StockClient initialItems={items} photoMap={photoMap} />
+      <StockClient initialItems={items} photoMap={photoMap} profileMap={profileMap} />
     </div>
   );
 }

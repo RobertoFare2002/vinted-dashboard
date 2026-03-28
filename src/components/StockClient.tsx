@@ -23,6 +23,7 @@ type StockItem = {
 type Props = {
   initialItems: StockItem[];
   photoMap:     Record<string, string>;
+  profileMap:   Record<string, string>;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -39,7 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
   archived:  "rgba(255,255,255,.2)",
 };
 
-export default function StockClient({ initialItems, photoMap }: Props) {
+export default function StockClient({ initialItems, photoMap, profileMap }: Props) {
   const [sellTarget, setSellTarget] = useState<StockItem | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("available");
   const [search, setSearch] = useState("");
@@ -304,7 +305,7 @@ export default function StockClient({ initialItems, photoMap }: Props) {
                         </div>
                         <div>
                           <div style={{ fontWeight: 600, fontSize: 13 }}>{item.name || "—"}</div>
-                          {item.profile_id && <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 1 }}>{item.profile_id}</div>}
+                          {item.profile_id && <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 1 }}>{profileMap[item.profile_id] ?? item.profile_id}</div>}
                         </div>
                       </div>
                     </td>

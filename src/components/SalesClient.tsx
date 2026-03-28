@@ -30,6 +30,7 @@ type Props = {
   initialSales: SaleRow[];
   templates:    Template[];
   photoMap:     Record<string, string>;
+  profileMap:   Record<string, string>;
 };
 
 // ── Costanti ──────────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 // ── Componente principale ─────────────────────────────────────────────────────
 
-export default function SalesClient({ initialSales, templates, photoMap }: Props) {
+export default function SalesClient({ initialSales, templates, photoMap, profileMap }: Props) {
   const [modal, setModal] = useState<{ mode: "add" | "edit"; sale?: SaleRow } | null>(null);
   const [filter, setFilter] = useState<"all" | "open" | "closed">("all");
   const [search, setSearch] = useState("");
@@ -304,7 +305,7 @@ export default function SalesClient({ initialSales, templates, photoMap }: Props
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)" }}>
                     {new Date(s.transaction_date!).toLocaleDateString("it")}
                     {s.platform ? ` · ${PLATFORM_LABELS[s.platform] ?? s.platform}` : ""}
-                    {s.profile_id ? ` · ${s.profile_id}` : ""}
+                    {s.profile_id ? ` · ${profileMap[s.profile_id] ?? s.profile_id}` : ""}
                   </div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -421,7 +422,7 @@ export default function SalesClient({ initialSales, templates, photoMap }: Props
                       </button>
                     </td>
                     <td style={{ padding: "13px 16px", color: "rgba(255,255,255,.4)", fontSize: 12 }}>
-                      {s.profile_id || "—"}
+                      {s.profile_id ? (profileMap[s.profile_id] ?? s.profile_id) : "—"}
                     </td>
                     <td style={{ padding: "13px 16px" }}>
                       <div style={{ display: "flex", gap: 6 }}>

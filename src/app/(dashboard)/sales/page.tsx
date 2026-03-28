@@ -9,7 +9,7 @@ export const revalidate = 0; // disabilita cache Next.js
 export default async function SalesPage() {
   const supabase = await createClient();
 
-  const [{ data: salesData }, { data: templatesData }] = await Promise.all([
+  const [{ data: salesData }, { data: templatesData }, { data: profilesData }] = await Promise.all([
     supabase
       .from("sales_log")
       .select("id,user_id,buyer_seller,amount,cost,platform,status,notes,transaction_date,template_id_ext,profile_id,raw_data")
@@ -18,12 +18,22 @@ export default async function SalesPage() {
       .from("templates")
       .select("id,name,photo_urls")
       .order("name", { ascending: true }),
+    supabase
+      .from("profiles")
+      .select("id,name"),
   ]);
 
   const sales     = (salesData     ?? []) as SaleRow[];
   const templates = (templatesData ?? []) as TemplateMin[];
+  const profiles  = (profilesData  ?? []) as { id: string; name: string }[];
 
-  // Mappa template_id → prima foto (per thumbnail in tabella)
+  // Mappa profile_id → nome profilo
+  const profileMap: Record<string, string> = {};
+  for (const p of profiles) {
+    profileMap[p.id] = p.name;
+  }
+
+  // Mappa template_id → prima foto
   const photoMap: Record<string, string> = {};
   for (const tpl of templates) {
     if (Array.isArray(tpl.photo_urls) && tpl.photo_urls[0]) {
@@ -42,11 +52,11 @@ export default async function SalesPage() {
         </div>
       </div>
 
-      {/* Tutta la logica interattiva è nel client component */}
       <SalesClient
         initialSales={sales}
         templates={templates.map(t => ({ id: t.id, name: t.name }))}
         photoMap={photoMap}
+        profileMap={profileMap}
       />
     </div>
   );
