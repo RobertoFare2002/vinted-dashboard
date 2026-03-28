@@ -79,8 +79,8 @@ export default function TemplatesClient({ templates }: Props) {
       ) : (
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: 20
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: 12
         }}>
           {templates.map(tpl => {
             const photos = Array.isArray(tpl.photo_urls) ? tpl.photo_urls.filter(Boolean) : [];
@@ -90,97 +90,82 @@ export default function TemplatesClient({ templates }: Props) {
             return (
               <div key={tpl.id} style={{
                 background: "rgba(18,18,22,.9)",
-                border: "1px solid rgba(255,255,255,.10)",
-                borderRadius: 16, overflow: "hidden",
+                border: "1px solid rgba(255,255,255,.08)",
+                borderRadius: 12, overflow: "hidden",
                 display: "flex", flexDirection: "column",
                 opacity: busy ? 0.5 : 1, transition: "opacity .2s",
                 position: "relative",
               }}>
                 {/* Foto cover */}
                 <div style={{
-                  width: "100%", aspectRatio: "4/3",
+                  width: "100%", aspectRatio: "16/10",
                   background: "rgba(255,255,255,.04)",
                   position: "relative", overflow: "hidden", flexShrink: 0
                 }}>
                   {cover
                     ? <img src={cover} alt={tpl.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}>
-                        <div style={{ fontSize: 32, opacity: .3 }}>📷</div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,.25)" }}>Nessuna foto</div>
+                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ fontSize: 22, opacity: .2 }}>📷</div>
                       </div>
                   }
                   {photos.length > 1 && (
                     <div style={{
-                      position: "absolute", bottom: 8, right: 8,
-                      background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)",
-                      color: "rgba(255,255,255,.9)", fontSize: 11, fontWeight: 600,
-                      padding: "3px 8px", borderRadius: 6
-                    }}>+{photos.length - 1} foto</div>
+                      position: "absolute", bottom: 5, right: 5,
+                      background: "rgba(0,0,0,.7)", backdropFilter: "blur(4px)",
+                      color: "rgba(255,255,255,.85)", fontSize: 10, fontWeight: 600,
+                      padding: "2px 6px", borderRadius: 5
+                    }}>+{photos.length - 1}</div>
                   )}
-
-                  {/* Bottoni azione sovrapposti in alto a destra */}
-                  <div style={{
-                    position: "absolute", top: 8, right: 8,
-                    display: "flex", gap: 5,
-                  }}>
+                  {/* Bottoni azione */}
+                  <div style={{ position: "absolute", top: 5, right: 5, display: "flex", gap: 3 }}>
                     <button onClick={() => setEditTarget(tpl)} style={{
-                      padding: "5px 10px", borderRadius: 8, fontSize: 12,
-                      border: "1px solid rgba(255,255,255,.2)",
-                      background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)",
-                      color: "rgba(255,255,255,.85)", cursor: "pointer", fontWeight: 600,
-                    }} title="Modifica">✏️</button>
+                      padding: "3px 7px", borderRadius: 6, fontSize: 11,
+                      border: "1px solid rgba(255,255,255,.15)",
+                      background: "rgba(0,0,0,.7)", backdropFilter: "blur(4px)",
+                      color: "rgba(255,255,255,.8)", cursor: "pointer",
+                    }}>✏️</button>
                     <button onClick={() => setConfirmDelete(tpl.id)} style={{
-                      padding: "5px 10px", borderRadius: 8, fontSize: 12,
+                      padding: "3px 7px", borderRadius: 6, fontSize: 11,
                       border: "1px solid rgba(255,77,109,.3)",
-                      background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)",
+                      background: "rgba(0,0,0,.7)", backdropFilter: "blur(4px)",
                       color: "#ff4d6d", cursor: "pointer",
-                    }} title="Elimina">🗑</button>
+                    }}>🗑</button>
                   </div>
                 </div>
 
                 {/* Strip foto secondarie */}
                 {photos.length > 1 && (
-                  <div style={{ display: "flex", gap: 3, padding: "6px 6px 0", overflowX: "auto" }}>
-                    {photos.slice(1, 6).map((url, i) => (
+                  <div style={{ display: "flex", gap: 2, padding: "4px 4px 0", overflowX: "auto" }}>
+                    {photos.slice(1, 5).map((url, i) => (
                       <img key={i} src={url} alt=""
-                        style={{ width: 44, height: 44, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.08)" }} />
+                        style={{ width: 34, height: 34, borderRadius: 4, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />
                     ))}
                   </div>
                 )}
 
                 {/* Info */}
-                <div style={{ padding: "12px 14px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ padding: "8px 10px 10px", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {tpl.name}
                   </div>
-                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
                     {tpl.brand     && <Tag>{tpl.brand}</Tag>}
                     {tpl.size      && <Tag>Taglia {tpl.size}</Tag>}
                     {tpl.condition && <Tag>{tpl.condition}</Tag>}
-                    {tpl.category  && <Tag dim>{tpl.category}</Tag>}
                   </div>
                   {tpl.price != null && (
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "#16c2a3", marginTop: 2 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#16c2a3" }}>
                       € {Number(tpl.price).toFixed(2)}
                     </div>
                   )}
-                  {tpl.description && (
-                    <div style={{
-                      fontSize: 12, color: "rgba(255,255,255,.40)",
-                      overflow: "hidden", display: "-webkit-box",
-                      WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, lineHeight: 1.5
-                    }}>
-                      {tpl.description}
-                    </div>
-                  )}
                   <div style={{
-                    fontSize: 11, color: "rgba(255,255,255,.25)",
-                    marginTop: "auto", paddingTop: 8,
-                    borderTop: "1px solid rgba(255,255,255,.06)",
+                    fontSize: 10, color: "rgba(255,255,255,.25)",
+                    marginTop: "auto", paddingTop: 6,
+                    borderTop: "1px solid rgba(255,255,255,.05)",
                     display: "flex", justifyContent: "space-between"
                   }}>
                     <span>{photos.length} foto</span>
-                    <span>Aggiornato: {new Date(tpl.updated_at).toLocaleDateString("it")}</span>
+                    <span>{new Date(tpl.updated_at).toLocaleDateString("it")}</span>
                   </div>
                 </div>
               </div>

@@ -2,20 +2,28 @@
 import { createClient } from "@/lib/supabase/server";
 import DashboardCharts from "@/components/DashboardCharts";
 
+export const revalidate = 0;
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: salesData }, { data: stockData }] = await Promise.all([
+  const [{ data: salesData }, { data: stockData }, { data: profilesData }] = await Promise.all([
     supabase.from("sales_log").select("*").order("transaction_date", { ascending: false }),
     supabase.from("stock_log").select("*").order("purchased_at", { ascending: false }),
+    supabase.from("profiles").select("id,name"),
   ]);
 
-  const sales = (salesData ?? []) as any[];
-  const stock = (stockData ?? []) as any[];
-  const nowTs = Date.now();
+  const sales    = (salesData    ?? []) as any[];
+  const stock    = (stockData    ?? []) as any[];
+  const profiles = (profilesData ?? []) as { id: string; name: string }[];
+  const nowTs    = Date.now();
 
-  const closed  = sales.filter((s: any) => s.status === "closed");
-  const open    = sales.filter((s: any) => s.status === "open");
+  // Mappa UUID profilo → nome
+  const profileNamesMap: Record<string, string> = {};
+  for (const p of profiles) profileNamesMap[p.id] = p.name;
+
+  const closed = sales.filter((s: any) => s.status === "closed");
+  const open   = sales.filter((s: any) => s.status === "open");
 
   const totalRevenue = closed.reduce((s: number, x: any) => s + Number(x.amount ?? 0), 0);
   const totalCost    = sales.reduce((s: number, x: any) => s + Number(x.cost ?? 0), 0);
@@ -30,7 +38,6 @@ export default async function DashboardPage() {
 
   type MonthEntry = { revenue: number; cost: number; count: number; total: number };
   const monthMap: Record<string, MonthEntry> = {};
-
   for (const s of sales) {
     const m = String(s.transaction_date ?? "").slice(0, 7);
     if (!m) continue;
@@ -71,29 +78,31 @@ export default async function DashboardPage() {
       margine:  p.cost > 0 ? Math.round(((p.revenue - p.cost) / p.cost) * 100) : 0,
     }));
 
-  const profileMap: Record<string, { revenue: number; count: number }> = {};
+  // ── Vendite per profilo con nomi risolti ─────────────────────────────────
+  const profileRevenueMap: Record<string, { revenue: number; count: number }> = {};
   for (const s of closed) {
-    const pid = String(s.profile_id || "Nessuno");
-    if (!profileMap[pid]) profileMap[pid] = { revenue: 0, count: 0 };
-    profileMap[pid].revenue += Number(s.amount ?? 0);
-    profileMap[pid].count   += 1;
+    const pid  = String(s.profile_id || "Nessuno");
+    const name = profileNamesMap[pid] ?? pid; // risolvi UUID → nome
+    if (!profileRevenueMap[name]) profileRevenueMap[name] = { revenue: 0, count: 0 };
+    profileRevenueMap[name].revenue += Number(s.amount ?? 0);
+    profileRevenueMap[name].count   += 1;
   }
 
-  const byProfile = Object.entries(profileMap)
+  const byProfile = Object.entries(profileRevenueMap)
     .sort(([, a], [, b]) => b.revenue - a.revenue)
     .map(([name, v]) => ({
-      name:    name === "all" ? "Tutti" : name,
+      name:    name,
       ricavi:  +v.revenue.toFixed(2),
       vendite: v.count,
     }));
 
   const staleStock = stock
-    .filter((i: any) => i.purchased_at)
+    .filter((i: any) => i.purchased_at && i.status === "available")
     .map((i: any) => ({
       name:    String(i.name || "—").slice(0, 28),
       days:    Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000),
       cost:    Number(i.purchase_price ?? 0),
-      profile: String(i.profile_id || "—").slice(0, 10),
+      profile: profileNamesMap[i.profile_id] ?? String(i.profile_id || "—").slice(0, 12),
     }))
     .sort((a: any, b: any) => b.days - a.days)
     .slice(0, 8);
@@ -123,7 +132,7 @@ export default async function DashboardPage() {
     closedSales:  closed.length,
     pendingSales: open.length,
     staleItems,
-    stockCount:   stock.length,
+    stockCount:   stock.filter((i: any) => i.status === "available").length,
   };
 
   return (
