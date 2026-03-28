@@ -3,6 +3,8 @@
 import { useState, useMemo, useTransition } from "react";
 import { deleteStockItem } from "@/app/(dashboard)/stock/actions";
 import SellModal from "@/components/SellModal";
+import dynamic from "next/dynamic";
+const StockEditModal = dynamic(() => import("./StockEditModal"), { ssr: false });
 
 type StockItem = {
   id: string; name: string|null; size: string|null; quantity: number|null;
@@ -37,6 +39,7 @@ export default function StockClient({ initialItems, photoMap, profileMap }: Prop
   const [filterStatus, setFilterStatus] = useState("available");
   const [search, setSearch]             = useState("");
   const [sellTarget, setSellTarget]     = useState<StockItem|null>(null);
+  const [editTarget, setEditTarget]     = useState<StockItem|null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string|null>(null);
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string|null>(null);
@@ -72,6 +75,14 @@ export default function StockClient({ initialItems, photoMap, profileMap }: Prop
           item={sellTarget}
           thumb={sellTarget.template_id_ext ? (photoMap[sellTarget.template_id_ext]??null) : null}
           onClose={() => setSellTarget(null)}
+        />
+      )}
+
+      {editTarget && (
+        <StockEditModal
+          item={editTarget}
+          thumb={editTarget.template_id_ext ? (photoMap[editTarget.template_id_ext]??null) : null}
+          onClose={() => setEditTarget(null)}
         />
       )}
 
@@ -171,7 +182,10 @@ export default function StockClient({ initialItems, photoMap, profileMap }: Prop
                 {item.status==="reserved" && (
                   <span style={{fontSize:11,color:"#f59e0b",fontWeight:700,padding:"5px 10px",borderRadius:8,background:"rgba(245,158,11,.1)",border:"1px solid rgba(245,158,11,.25)"}}>Sospeso</span>
                 )}
-                <button onClick={()=>setConfirmDelete(item.id)} style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,77,109,.2)",background:"transparent",color:"#ff4d6d",cursor:"pointer",fontSize:12}}>🗑</button>
+                <div style={{display:"flex",gap:5}}>
+                  <button onClick={()=>setEditTarget(item)} style={{padding:"5px 9px",borderRadius:7,border:"1px solid rgba(255,255,255,.12)",background:"rgba(255,255,255,.05)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:13}}>✏️</button>
+                  <button onClick={()=>setConfirmDelete(item.id)} style={{padding:"5px 9px",borderRadius:7,border:"1px solid rgba(255,77,109,.2)",background:"transparent",color:"#ff4d6d",cursor:"pointer",fontSize:13}}>🗑</button>
+                </div>
               </div>
             </div>
           );

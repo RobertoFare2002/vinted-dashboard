@@ -167,3 +167,37 @@ export async function deleteStockItem(stockId: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/stock");
 }
+
+// ── UPDATE articolo magazzino ────────────────────────────────────────────────
+
+export async function updateStockItem(id: string, input: {
+  name:           string;
+  size:           string;
+  quantity:       number;
+  purchase_price: number | null;
+  purchased_at:   string | null;
+  location:       string;
+  notes:          string;
+  status:         string;
+}) {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { error } = await supabase
+    .from("stock_log")
+    .update({
+      name:           input.name.trim(),
+      size:           input.size.trim(),
+      quantity:       input.quantity,
+      purchase_price: input.purchase_price,
+      purchased_at:   input.purchased_at || null,
+      location:       input.location.trim() || null,
+      notes:          input.notes.trim()    || null,
+      status:         input.status,
+      updated_at:     new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/stock");
+}
