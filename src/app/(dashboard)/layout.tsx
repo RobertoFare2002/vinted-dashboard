@@ -13,17 +13,34 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Se non autenticato → vai al login
   if (!user) {
     redirect("/login");
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar userEmail={user.email ?? ""} />
-      <main style={{ flex: 1, padding: "28px 32px", overflowX: "hidden" }}>
-        {children}
-      </main>
-    </div>
+    <>
+      <style>{`
+        .dashboard-wrap {
+          display: flex;
+          min-height: 100vh;
+        }
+        .dashboard-main {
+          flex: 1;
+          padding: 28px 32px;
+          overflow-x: hidden;
+        }
+        @media (max-width: 767px) {
+          .dashboard-main {
+            padding: 72px 16px 24px 16px;
+          }
+        }
+      `}</style>
+      <div className="dashboard-wrap">
+        <Sidebar userEmail={user.email ?? ""} />
+        <main className="dashboard-main">
+          {children}
+        </main>
+      </div>
+    </>
   );
 }
