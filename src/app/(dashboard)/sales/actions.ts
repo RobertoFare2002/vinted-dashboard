@@ -118,6 +118,15 @@ export async function updateSale(id: string, input: Partial<SaleInput>) {
 export async function deleteSale(id: string) {
   const { supabase, user } = await getAuthenticatedClient();
 
+  // Prima leggi la vendita per sapere se c'è uno stock collegato
+  const { data: saleData } = await supabase
+    .from("sales_log")
+    .select("raw_data, template_id_ext, status")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  // Elimina la vendita
   const { error } = await supabase
     .from("sales_log")
     .delete()
@@ -125,6 +134,32 @@ export async function deleteSale(id: string) {
     .eq("user_id", user.id);
 
   if (error) throw new Error(error.message);
+
+  // Se la vendita aveva un articolo in magazzino collegato, rimettilo disponibile
+  if (saleData) {
+    const stockId = (saleData.raw_data as { stock_id?: string } | null)?.stock_id;
+
+    if (stockId) {
+      // Collegamento diretto via stock_id
+      await supabase
+        .from("stock_log")
+        .update({ status: "available", updated_at: new Date().toISOString() })
+        .eq("id", stockId)
+        .eq("user_id", user.id);
+    } else if (saleData.template_id_ext) {
+      // Fallback: collegamento via template_id_ext
+      // Rimette disponibile solo se era reserved (non sold — potrebbe essere un pezzo diverso)
+      await supabase
+        .from("stock_log")
+        .update({ status: "available", updated_at: new Date().toISOString() })
+        .eq("template_id_ext", saleData.template_id_ext)
+        .eq("user_id", user.id)
+        .in("status", ["reserved", "sold"]);
+    }
+
+    revalidatePath("/stock");
+  }
+
   revalidatePath("/sales");
 }
 

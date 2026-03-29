@@ -130,7 +130,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
           <div style={{ ...sheetStyle, borderColor: "rgba(255,77,109,.2)" }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 36, height: 4, background: "rgba(255,255,255,.15)", borderRadius: 2, margin: "0 auto 20px" }} />
             <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>Elimina vendita?</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginBottom: 24 }}>Questa azione non può essere annullata.</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginBottom: 24 }}>La vendita verrà eliminata e l&apos;articolo tornerà disponibile in magazzino.</div>
             <div style={{ display: "flex", gap: 10 }}>
               <GlassBtn onClick={() => setConfirmDelete(null)} color="rgba(255,255,255,.4)">Annulla</GlassBtn>
               <GlassBtn onClick={() => handleDelete(confirmDelete)} color={G.danger}>Elimina</GlassBtn>
