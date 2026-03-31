@@ -201,3 +201,66 @@ export async function updateStockItem(id: string, input: {
   if (error) throw new Error(error.message);
   revalidatePath("/stock");
 }
+
+// ── VENDI A BLOCCO più articoli ──────────────────────────────────────────────
+
+export async function bulkSellStockItems(input: {
+  items: {
+    stockId:       string;
+    stockName:     string;
+    purchasePrice: number;
+    externalId:    string;
+    profileId:     string | null;
+    salePrice:     number;
+  }[];
+  buyerSeller: string;
+  saleDate:    string;
+  platform:    string;
+  notes:       string;
+  profileId:   string | null;
+}) {
+  const { supabase, user } = await getAuthenticatedClient();
+  const bulkId   = crypto.randomUUID();
+  const bulkSize = input.items.length;
+
+  for (const item of input.items) {
+    const { error: stockError } = await supabase
+      .from("stock_log")
+      .update({ status: "reserved", updated_at: new Date().toISOString() })
+      .eq("id", item.stockId)
+      .eq("user_id", user.id);
+
+    if (stockError) throw new Error("Errore magazzino: " + stockError.message);
+
+    const { error: saleError } = await supabase
+      .from("sales_log")
+      .insert({
+        user_id:          user.id,
+        external_id:      crypto.randomUUID(),
+        type:             "sale",
+        buyer_seller:     input.buyerSeller.trim() || item.stockName,
+        amount:           Number(item.salePrice)    || 0,
+        cost:             Number(item.purchasePrice) || 0,
+        platform:         input.platform             || "vinted",
+        status:           "open",
+        notes:            input.notes?.trim()        || null,
+        transaction_date: input.saleDate
+          ? new Date(input.saleDate).toISOString()
+          : new Date().toISOString(),
+        template_id_ext:  item.externalId  || null,
+        profile_id:       input.profileId  || item.profileId || null,
+        raw_data:         JSON.stringify({
+          stock_id:   item.stockId,
+          bulk_id:    bulkId,
+          bulk_size:  bulkSize,
+        }),
+        created_at:  new Date().toISOString(),
+        updated_at:  new Date().toISOString(),
+      });
+
+    if (saleError) throw new Error("Errore creazione vendita: " + saleError.message);
+  }
+
+  revalidatePath("/stock");
+  revalidatePath("/sales");
+}

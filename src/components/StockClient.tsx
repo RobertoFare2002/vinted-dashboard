@@ -4,7 +4,8 @@ import { useState, useMemo, useTransition } from "react";
 import { deleteStockItem } from "@/app/(dashboard)/stock/actions";
 import SellModal from "@/components/SellModal";
 import dynamic from "next/dynamic";
-const StockEditModal = dynamic(() => import("./StockEditModal"), { ssr: false });
+const StockEditModal  = dynamic(() => import("./StockEditModal"),  { ssr: false });
+const BulkSellModal   = dynamic(() => import("./BulkSellModal"),   { ssr: false });
 
 type StockItem = {
   id: string; name: string|null; size: string|null; quantity: number|null;
@@ -53,6 +54,17 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
   const [filterProfile, setFilterProfile] = useState("");
+  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
+  const [bulkTarget, setBulkTarget]       = useState<StockItem[] | null>(null);
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+  function clearSelection() { setSelectedIds(new Set()); }
 
   const profileFiltered = useMemo(() => {
     if (!filterProfile) return initialItems;
@@ -100,6 +112,38 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
     <>
       {sellTarget && <SellModal item={sellTarget} thumb={sellTarget.template_id_ext ? (photoMap[sellTarget.template_id_ext] ?? null) : null} onClose={() => setSellTarget(null)} />}
       {editTarget && <StockEditModal item={editTarget} thumb={editTarget.template_id_ext ? (photoMap[editTarget.template_id_ext] ?? null) : null} onClose={() => setEditTarget(null)} profiles={profiles} />}
+      {bulkTarget && <BulkSellModal items={bulkTarget} photoMap={photoMap} profiles={profiles} onClose={() => { setBulkTarget(null); clearSelection(); }} />}
+
+      {/* Barra flottante selezione */}
+      {selectedIds.size > 0 && (
+        <div style={{
+          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+          zIndex: 80, display: "flex", alignItems: "center", gap: 10,
+          background: "rgba(10,14,28,.97)", border: "1px solid rgba(0,229,195,.3)",
+          borderRadius: 16, padding: "12px 16px", boxShadow: "0 8px 32px rgba(0,0,0,.6)",
+          backdropFilter: "blur(20px)", minWidth: 280,
+        }}>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,.7)", flex: 1 }}>
+            {selectedIds.size} articol{selectedIds.size === 1 ? "o" : "i"} selezionat{selectedIds.size === 1 ? "o" : "i"}
+          </span>
+          <button onClick={clearSelection} style={{
+            padding: "6px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)",
+            background: "transparent", color: "rgba(255,255,255,.45)", cursor: "pointer", fontSize: 12, fontFamily: "inherit",
+          }}>✕</button>
+          {selectedIds.size >= 2 && (
+            <button onClick={() => {
+              const selected = items.filter(i => selectedIds.has(i.id) && i.status === "available");
+              if (selected.length < 2) return;
+              setBulkTarget(selected);
+            }} style={{
+              padding: "8px 16px", borderRadius: 10,
+              border: "1px solid rgba(0,229,195,.4)", background: "rgba(0,229,195,.12)",
+              color: "#00e5c3", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+              whiteSpace: "nowrap",
+            }}>🛒 Vendi blocco</button>
+          )}
+        </div>
+      )}
 
       {confirmDelete && (
         <div style={overlayStyle} onClick={() => setConfirmDelete(null)}>
@@ -188,13 +232,28 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
           const busy  = isPending && actionId === item.id;
           const profileName = item.profile_id ? (profileMap[item.profile_id] ?? item.profile_id) : null;
 
+          const isSelected = selectedIds.has(item.id);
+
           return (
             <div key={item.id} style={{
-              background: G.glass, border: `1px solid ${G.border}`,
+              background: isSelected ? "rgba(0,229,195,.06)" : G.glass,
+              border: `1px solid ${isSelected ? "rgba(0,229,195,.35)" : G.border}`,
               backdropFilter: G.blur, borderRadius: 14,
               display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
               opacity: busy ? .5 : 1, transition: "all .2s",
             }}>
+              {/* Checkbox selezione (solo articoli disponibili) */}
+              {item.status === "available" && (
+                <div onClick={() => toggleSelect(item.id)} style={{
+                  width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: "pointer",
+                  border: `2px solid ${isSelected ? G.accent : "rgba(255,255,255,.2)"}`,
+                  background: isSelected ? G.accent : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all .15s",
+                }}>
+                  {isSelected && <span style={{ fontSize: 11, color: "#000", fontWeight: 900 }}>✓</span>}
+                </div>
+              )}
               <div style={{ width: 52, height: 52, borderRadius: 11, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,.05)", border: `1px solid ${G.border}` }}>
                 {thumb
                   ? <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />

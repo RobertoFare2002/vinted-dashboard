@@ -9,7 +9,7 @@ type SaleRow = {
   id: string; buyer_seller: string | null; amount: number | null; cost: number | null;
   platform: string | null; status: string | null; notes: string | null;
   transaction_date: string | null; template_id_ext: string | null;
-  profile_id: string | null; raw_data: { stock_id?: string } | null;
+  profile_id: string | null; raw_data: { stock_id?: string; bulk_id?: string; bulk_size?: number } | null;
 };
 type Template = { id: string; name: string };
 type Props = {
@@ -363,13 +363,20 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
                 </div>
 
                 {/* Badge stato */}
-                <div style={{ padding: "0 14px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ padding: "0 14px 12px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <button onClick={() => handleToggle(s)} style={{
                     padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
                     border: `1px solid ${st.border}`, background: st.bg,
                     backdropFilter: G.blur, color: st.color, transition: "all .15s",
                     fontFamily: "inherit",
                   }}>{st.label}</button>
+                  {s.raw_data?.bulk_id && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 10,
+                      background: "rgba(79,142,247,.12)", border: "1px solid rgba(79,142,247,.3)",
+                      color: "#4f8ef7", letterSpacing: ".02em",
+                    }}>🔗 Blocco {s.raw_data.bulk_size ? `×${s.raw_data.bulk_size}` : ""}</span>
+                  )}
                   <span style={{ fontSize: 11, color: gainColor, fontWeight: 700 }}>{gain > 0 ? "+" : ""}€{fmt(gain)}</span>
                 </div>
 
