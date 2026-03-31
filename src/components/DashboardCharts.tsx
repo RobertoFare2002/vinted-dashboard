@@ -60,16 +60,20 @@ export default function DashboardCharts({ sales, stock, profiles }: Props) {
 
   const filteredSales = useMemo(() => {
     let list = sales;
-    if (filterProfile) list = list.filter(s => s.profile_id === filterProfile);
-    if (filterYear)    list = list.filter(s => String(s.transaction_date ?? "").slice(0, 4) === filterYear);
-    if (filterMonth)   list = list.filter(s => String(s.transaction_date ?? "").slice(5, 7) === filterMonth);
+    if (filterProfile) {
+      const profileName = profiles.find(p => p.id === filterProfile)?.name ?? "";
+      list = list.filter(s => s.profile_id === filterProfile || s.profile_id === profileName);
+    }
+    if (filterYear)  list = list.filter(s => String(s.transaction_date ?? "").slice(0, 4) === filterYear);
+    if (filterMonth) list = list.filter(s => String(s.transaction_date ?? "").slice(5, 7) === filterMonth);
     return list;
-  }, [sales, filterProfile, filterYear, filterMonth]);
+  }, [sales, filterProfile, filterYear, filterMonth, profiles]);
 
   const filteredStock = useMemo(() => {
     if (!filterProfile) return stock;
-    return stock.filter(i => i.profile_id === filterProfile);
-  }, [stock, filterProfile]);
+    const profileName = profiles.find(p => p.id === filterProfile)?.name ?? "";
+    return stock.filter(i => i.profile_id === filterProfile || i.profile_id === profileName);
+  }, [stock, filterProfile, profiles]);
 
   const nowTs   = Date.now();
   const closed  = filteredSales.filter(s => s.status === "closed");
@@ -177,7 +181,7 @@ export default function DashboardCharts({ sales, stock, profiles }: Props) {
 
   const kpiItems = [
     { label:"Totale vendite",  value:`€${fmt(totalRevenue+totalPending)}`, color:PURPLE, sub:"concluse + sospeso" },
-    { label:"Ricavi conclusi", value:`€${fmt(totalRevenue)}`,              color:ACCENT, sub:`${closed.length} vendite` },
+    { label:"N° Vendite",      value:String(closed.length),                color:ACCENT, sub:`${filteredSales.length} tot · €${fmt(totalRevenue)}` },
     { label:"Costi acquisti",  value:`€${fmt(totalCost)}`,                 color:DANGER, sub:`${filteredSales.length} totali` },
     { label:"Profitto netto",  value:`€${fmt(profit)}`,                    color:profit>=0?ACCENT:DANGER, sub:`margine ${avgMargin}%` },
     { label:"In sospeso",      value:String(open.length),                  color:AMBER,  sub:"vendite aperte" },
