@@ -150,20 +150,22 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
         ))}
       </div>
 
-      {/* Cerca + Profilo */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <div style={{ position: "relative", flex: 1 }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca articolo..."
-            style={{
-              width: "100%", padding: "11px 14px", borderRadius: 12,
-              border: `1px solid ${G.border}`, background: G.glass,
-              backdropFilter: G.blur, color: "rgba(255,255,255,.85)",
-              fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
-            }} />
-          <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "rgba(255,255,255,.2)" }}>{items.length}/{initialItems.length}</span>
-        </div>
+      {/* Cerca */}
+      <div style={{ position: "relative", marginBottom: 8 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca articolo..."
+          style={{
+            width: "100%", padding: "11px 14px", borderRadius: 12,
+            border: `1px solid ${G.border}`, background: G.glass,
+            backdropFilter: G.blur, color: "rgba(255,255,255,.85)",
+            fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
+          }} />
+        <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "rgba(255,255,255,.2)" }}>{items.length}/{initialItems.length}</span>
+      </div>
+
+      {/* Filtro profilo — riga dedicata full-width */}
+      <div style={{ marginBottom: 14 }}>
         <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)} style={{
-          padding: "11px 12px", borderRadius: 12, flexShrink: 0,
+          width: "100%", padding: "11px 14px", borderRadius: 12, boxSizing: "border-box" as const,
           border: filterProfile ? `1px solid rgba(0,229,195,.3)` : `1px solid ${G.border}`,
           background: filterProfile ? "rgba(0,229,195,.08)" : G.glass,
           backdropFilter: G.blur, color: filterProfile ? G.accent : "rgba(255,255,255,.55)",

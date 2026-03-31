@@ -212,7 +212,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
         </div>
 
         {/* Toolbar */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <button onClick={() => setModal({ mode: "add" })} style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "11px 18px", borderRadius: 12, flexShrink: 0,
@@ -229,8 +229,12 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
               backdropFilter: G.blur, color: "rgba(255,255,255,.85)",
               fontSize: 13, outline: "none", fontFamily: "inherit",
             }} />
+        </div>
+
+        {/* Filtro profilo — riga dedicata full-width */}
+        <div style={{ marginBottom: 10 }}>
           <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)} style={{
-            padding: "11px 12px", borderRadius: 12, flexShrink: 0,
+            width: "100%", padding: "11px 14px", borderRadius: 12, boxSizing: "border-box" as const,
             border: `1px solid ${filterProfile ? "rgba(0,229,195,.3)" : G.border}`,
             background: filterProfile ? "rgba(0,229,195,.08)" : G.glass,
             backdropFilter: G.blur, color: filterProfile ? G.accent : "rgba(255,255,255,.55)",
