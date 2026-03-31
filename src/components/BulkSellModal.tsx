@@ -61,7 +61,6 @@ export default function BulkSellModal({ items, photoMap, profiles, onClose }: Pr
   );
 
   // Campi comuni
-  const [buyer,     setBuyer]     = useState("");
   const [date,      setDate]      = useState(today);
   const [platform,  setPlatform]  = useState("vinted");
   const [notes,     setNotes]     = useState("");
@@ -79,9 +78,6 @@ export default function BulkSellModal({ items, photoMap, profiles, onClose }: Pr
 
   function handleSave() {
     setError(null);
-    if (!buyer.trim()) return setError("Inserisci il nome dell'acquirente.");
-    const hasRevenue = items.every(i => parseFloat(revenues[i.id] || "0") >= 0);
-    if (!hasRevenue) return setError("Inserisci il ricavo per ogni articolo.");
 
     startTransition(async () => {
       try {
@@ -94,11 +90,10 @@ export default function BulkSellModal({ items, photoMap, profiles, onClose }: Pr
             profileId:     i.profile_id,
             salePrice:     parseFloat(revenues[i.id] || "0") || 0,
           })),
-          buyerSeller: buyer,
-          saleDate:    date,
+          saleDate:  date,
           platform,
           notes,
-          profileId:   profileId || null,
+          profileId: profileId || null,
         });
         onClose();
       } catch (e: unknown) {
@@ -124,11 +119,6 @@ export default function BulkSellModal({ items, photoMap, profiles, onClose }: Pr
         </div>
 
         {/* Campi comuni */}
-        <div style={S.field}>
-          <label style={S.label}>Acquirente *</label>
-          <input value={buyer} onChange={e => setBuyer(e.target.value)} style={S.input} placeholder="Nome acquirente" />
-        </div>
-
         <div style={{ ...S.grid2, marginBottom: 13 }}>
           <div>
             <label style={S.label}>Data vendita</label>

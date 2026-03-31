@@ -202,7 +202,7 @@ export async function updateStockItem(id: string, input: {
   revalidatePath("/stock");
 }
 
-// ── VENDI A BLOCCO più articoli ──────────────────────────────────────────────
+// ── VENDI A BLOCCO più articoli (una sola riga in sales_log) ─────────────────
 
 export async function bulkSellStockItems(input: {
   items: {
@@ -213,16 +213,17 @@ export async function bulkSellStockItems(input: {
     profileId:     string | null;
     salePrice:     number;
   }[];
-  buyerSeller: string;
-  saleDate:    string;
-  platform:    string;
-  notes:       string;
-  profileId:   string | null;
+  saleDate:  string;
+  platform:  string;
+  notes:     string;
+  profileId: string | null;
 }) {
   const { supabase, user } = await getAuthenticatedClient();
-  const bulkId   = crypto.randomUUID();
-  const bulkSize = input.items.length;
+  const bulkSize   = input.items.length;
+  const totalAmount = input.items.reduce((s, i) => s + Number(i.salePrice    || 0), 0);
+  const totalCost   = input.items.reduce((s, i) => s + Number(i.purchasePrice || 0), 0);
 
+  // Marca tutti gli articoli come "reserved"
   for (const item of input.items) {
     const { error: stockError } = await supabase
       .from("stock_log")
@@ -231,34 +232,106 @@ export async function bulkSellStockItems(input: {
       .eq("user_id", user.id);
 
     if (stockError) throw new Error("Errore magazzino: " + stockError.message);
+  }
 
-    const { error: saleError } = await supabase
-      .from("sales_log")
-      .insert({
-        user_id:          user.id,
-        external_id:      crypto.randomUUID(),
-        type:             "sale",
-        buyer_seller:     input.buyerSeller.trim() || item.stockName,
-        amount:           Number(item.salePrice)    || 0,
-        cost:             Number(item.purchasePrice) || 0,
-        platform:         input.platform             || "vinted",
-        status:           "open",
-        notes:            input.notes?.trim()        || null,
-        transaction_date: input.saleDate
-          ? new Date(input.saleDate).toISOString()
-          : new Date().toISOString(),
-        template_id_ext:  item.externalId  || null,
-        profile_id:       input.profileId  || item.profileId || null,
-        raw_data:         JSON.stringify({
-          stock_id:   item.stockId,
-          bulk_id:    bulkId,
-          bulk_size:  bulkSize,
-        }),
-        created_at:  new Date().toISOString(),
-        updated_at:  new Date().toISOString(),
-      });
+  // Auto-genera nome: primo articolo + "(+N altri)" oppure solo il nome se 1
+  const firstName = input.items[0]?.stockName ?? "Articolo";
+  const buyerSeller = bulkSize > 1
+    ? `${firstName} (+${bulkSize - 1} altri)`
+    : firstName;
 
-    if (saleError) throw new Error("Errore creazione vendita: " + saleError.message);
+  // Crea UNA sola riga in sales_log con tutti gli articoli in raw_data
+  const { error: saleError } = await supabase
+    .from("sales_log")
+    .insert({
+      user_id:          user.id,
+      external_id:      crypto.randomUUID(),
+      type:             "sale",
+      buyer_seller:     buyerSeller,
+      amount:           totalAmount,
+      cost:             totalCost,
+      platform:         input.platform || "vinted",
+      status:           "open",
+      notes:            input.notes?.trim() || null,
+      transaction_date: input.saleDate
+        ? new Date(input.saleDate).toISOString()
+        : new Date().toISOString(),
+      template_id_ext:  input.items[0]?.externalId || null,
+      profile_id:       input.profileId || input.items[0]?.profileId || null,
+      raw_data:         JSON.stringify({
+        bulk:      true,
+        bulk_size: bulkSize,
+        items:     input.items.map(i => ({
+          stock_id:   i.stockId,
+          name:       i.stockName,
+          sale_price: i.salePrice,
+          cost:       i.purchasePrice,
+        })),
+      }),
+      created_at:  new Date().toISOString(),
+      updated_at:  new Date().toISOString(),
+    });
+
+  if (saleError) throw new Error("Errore creazione vendita: " + saleError.message);
+
+  revalidatePath("/stock");
+  revalidatePath("/sales");
+}
+
+// ── CONCLUDI vendita a blocco → tutti gli articoli diventano sold ─────────────
+
+export async function concludeBulkSale(input: {
+  saleId:   string;
+  stockIds: string[];
+}) {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { error: saleError } = await supabase
+    .from("sales_log")
+    .update({ status: "closed", updated_at: new Date().toISOString() })
+    .eq("id", input.saleId)
+    .eq("user_id", user.id);
+
+  if (saleError) throw new Error("Errore conclusione vendita: " + saleError.message);
+
+  for (const stockId of input.stockIds) {
+    const { error: stockError } = await supabase
+      .from("stock_log")
+      .update({ status: "sold", updated_at: new Date().toISOString() })
+      .eq("id", stockId)
+      .eq("user_id", user.id);
+
+    if (stockError) throw new Error("Errore aggiornamento magazzino: " + stockError.message);
+  }
+
+  revalidatePath("/stock");
+  revalidatePath("/sales");
+}
+
+// ── ANNULLA vendita a blocco → tutti gli articoli tornano available ───────────
+
+export async function cancelBulkSale(input: {
+  saleId:   string;
+  stockIds: string[];
+}) {
+  const { supabase, user } = await getAuthenticatedClient();
+
+  const { error: deleteError } = await supabase
+    .from("sales_log")
+    .delete()
+    .eq("id", input.saleId)
+    .eq("user_id", user.id);
+
+  if (deleteError) throw new Error("Errore eliminazione vendita: " + deleteError.message);
+
+  for (const stockId of input.stockIds) {
+    const { error: stockError } = await supabase
+      .from("stock_log")
+      .update({ status: "available", updated_at: new Date().toISOString() })
+      .eq("id", stockId)
+      .eq("user_id", user.id);
+
+    if (stockError) throw new Error("Errore ripristino magazzino: " + stockError.message);
   }
 
   revalidatePath("/stock");

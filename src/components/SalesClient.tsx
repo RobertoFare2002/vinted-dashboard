@@ -2,14 +2,20 @@
 // src/components/SalesClient.tsx
 import { useState, useMemo, useTransition } from "react";
 import { deleteSale, changeSaleStatus } from "@/app/(dashboard)/sales/actions";
-import { cancelSale, concludeSale } from "@/app/(dashboard)/stock/actions";
+import { cancelSale, concludeSale, cancelBulkSale, concludeBulkSale } from "@/app/(dashboard)/stock/actions";
 import SaleModal from "@/components/SaleModal";
 
 type SaleRow = {
   id: string; buyer_seller: string | null; amount: number | null; cost: number | null;
   platform: string | null; status: string | null; notes: string | null;
   transaction_date: string | null; template_id_ext: string | null;
-  profile_id: string | null; raw_data: { stock_id?: string; bulk_id?: string; bulk_size?: number } | null;
+  profile_id: string | null;
+  raw_data: {
+    stock_id?: string;
+    bulk?: boolean;
+    bulk_size?: number;
+    items?: { stock_id: string; name: string; sale_price: number; cost: number }[];
+  } | null;
 };
 type Template = { id: string; name: string };
 type Props = {
@@ -72,7 +78,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<{ saleId: string; stockId: string } | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<{ saleId: string; stockIds: string[]; isBulk: boolean } | null>(null);
   const [expanded, setExpanded]         = useState<string | null>(null);
 
   // Anni disponibili
@@ -125,13 +131,27 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
     setActionId(s.id);
     startTransition(async () => { await changeSaleStatus(s.id, next as "open" | "closed"); setActionId(null); });
   }
-  function handleCancel(saleId: string, stockId: string) {
+  function handleCancel(saleId: string, stockIds: string[], isBulk: boolean) {
     setConfirmCancel(null); setActionId(saleId);
-    startTransition(async () => { await cancelSale({ saleId, stockId }); setActionId(null); });
+    startTransition(async () => {
+      if (isBulk) {
+        await cancelBulkSale({ saleId, stockIds });
+      } else {
+        await cancelSale({ saleId, stockId: stockIds[0] });
+      }
+      setActionId(null);
+    });
   }
-  function handleConclude(saleId: string, stockId: string) {
+  function handleConclude(saleId: string, stockIds: string[], isBulk: boolean) {
     setActionId(saleId);
-    startTransition(async () => { await concludeSale({ saleId, stockId }); setActionId(null); });
+    startTransition(async () => {
+      if (isBulk) {
+        await concludeBulkSale({ saleId, stockIds });
+      } else {
+        await concludeSale({ saleId, stockId: stockIds[0] });
+      }
+      setActionId(null);
+    });
   }
 
   const overlayStyle: React.CSSProperties = {
@@ -199,7 +219,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
               <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginBottom: 24 }}>L&apos;articolo tornerà disponibile in magazzino.</div>
               <div style={{ display: "flex", gap: 10 }}>
                 <GlassBtn onClick={() => setConfirmCancel(null)} color="rgba(255,255,255,.4)">Chiudi</GlassBtn>
-                <GlassBtn onClick={() => handleCancel(confirmCancel.saleId, confirmCancel.stockId)} color={G.amber}>Annulla vendita</GlassBtn>
+                <GlassBtn onClick={() => handleCancel(confirmCancel.saleId, confirmCancel.stockIds, confirmCancel.isBulk)} color={G.amber}>Annulla vendita</GlassBtn>
               </div>
             </div>
           </div>
@@ -370,7 +390,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
                     backdropFilter: G.blur, color: st.color, transition: "all .15s",
                     fontFamily: "inherit",
                   }}>{st.label}</button>
-                  {s.raw_data?.bulk_id && (
+                  {s.raw_data?.bulk && (
                     <span style={{
                       fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 10,
                       background: "rgba(79,142,247,.12)", border: "1px solid rgba(79,142,247,.3)",
@@ -389,12 +409,20 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
                     background: "rgba(0,0,0,.25)",
                   }}>
                     <GlassBtn onClick={() => { setExpanded(null); setModal({ mode: "edit", sale: s }); }} color="rgba(255,255,255,.5)">✏️ Modifica</GlassBtn>
-                    {s.raw_data?.stock_id && s.status === "open" && (
-                      <GlassBtn onClick={() => handleConclude(s.id, s.raw_data!.stock_id!)} color={G.accent}>✅ Concludi</GlassBtn>
-                    )}
-                    {s.raw_data?.stock_id && (
-                      <GlassBtn onClick={() => setConfirmCancel({ saleId: s.id, stockId: s.raw_data!.stock_id! })} color={G.amber}>↩ Annulla</GlassBtn>
-                    )}
+                    {(s.raw_data?.stock_id || s.raw_data?.bulk) && s.status === "open" && (() => {
+                      const isBulk = !!s.raw_data?.bulk;
+                      const stockIds = isBulk
+                        ? (s.raw_data?.items ?? []).map(i => i.stock_id)
+                        : [s.raw_data!.stock_id!];
+                      return <GlassBtn onClick={() => handleConclude(s.id, stockIds, isBulk)} color={G.accent}>✅ Concludi</GlassBtn>;
+                    })()}
+                    {(s.raw_data?.stock_id || s.raw_data?.bulk) && (() => {
+                      const isBulk = !!s.raw_data?.bulk;
+                      const stockIds = isBulk
+                        ? (s.raw_data?.items ?? []).map(i => i.stock_id)
+                        : [s.raw_data!.stock_id!];
+                      return <GlassBtn onClick={() => setConfirmCancel({ saleId: s.id, stockIds, isBulk })} color={G.amber}>↩ Annulla</GlassBtn>;
+                    })()}
                     <button onClick={() => setConfirmDelete(s.id)} style={{
                       padding: "11px 14px", borderRadius: 12,
                       border: `1px solid rgba(255,77,109,.25)`,
