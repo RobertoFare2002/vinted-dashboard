@@ -175,7 +175,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
       `}</style>
 
       <div className="sales-client">
-        {modal && <SaleModal mode={modal.mode} sale={modal.sale} templates={templates} onClose={() => setModal(null)} />}
+        {modal && <SaleModal mode={modal.mode} sale={modal.sale} templates={templates} profiles={profiles} onClose={() => setModal(null)} />}
 
         {confirmDelete && (
           <div style={overlayStyle} onClick={() => setConfirmDelete(null)}>

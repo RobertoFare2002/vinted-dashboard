@@ -1,7 +1,7 @@
 // src/components/SaleModal.tsx
 "use client";
 
-import { useRef, useTransition, useState } from "react";
+import { useRef, useTransition, useState, useMemo } from "react";
 import { createSale, updateSale } from "@/app/(dashboard)/sales/actions";
 
 // ── Tipi ─────────────────────────────────────────────────────────────────────
@@ -20,11 +20,13 @@ type SaleRow = {
 };
 
 type Template = { id: string; name: string };
+type Profile  = { id: string; name: string };
 
 type Props = {
   mode:       "add" | "edit";
   sale?:      SaleRow;
   templates?: Template[];
+  profiles?:  Profile[];
   onClose:    () => void;
 };
 
@@ -69,7 +71,7 @@ const S = {
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export default function SaleModal({ mode, sale, templates = [], onClose }: Props) {
+export default function SaleModal({ mode, sale, templates = [], profiles = [], onClose }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -83,8 +85,17 @@ export default function SaleModal({ mode, sale, templates = [], onClose }: Props
   const statusRef   = useRef<HTMLSelectElement>(null);
   const dateRef     = useRef<HTMLInputElement>(null);
   const tplRef      = useRef<HTMLSelectElement>(null);
-  const profileRef  = useRef<HTMLInputElement>(null);
   const notesRef    = useRef<HTMLTextAreaElement>(null);
+
+  // Profilo controllato — risolve UUID o nome legacy
+  const resolvedProfileId = useMemo(() => {
+    if (!sale?.profile_id) return "";
+    if (profiles.some(p => p.id === sale.profile_id)) return sale.profile_id;
+    const byName = profiles.find(p => p.name === sale.profile_id);
+    return byName?.id ?? "";
+  }, [sale?.profile_id, profiles]);
+
+  const [selectedProfile, setSelectedProfile] = useState(resolvedProfileId);
 
   function getValues() {
     return {
@@ -95,7 +106,7 @@ export default function SaleModal({ mode, sale, templates = [], onClose }: Props
       status:           statusRef.current?.value   ?? "open",
       transaction_date: dateRef.current?.value     ?? today,
       template_id_ext:  tplRef.current?.value      || null,
-      profile_id:       profileRef.current?.value  || null,
+      profile_id:       selectedProfile             || null,
       notes:            notesRef.current?.value     ?? "",
     };
   }
@@ -190,7 +201,12 @@ export default function SaleModal({ mode, sale, templates = [], onClose }: Props
           </div>
           <div>
             <label style={S.label}>Profilo / Account</label>
-            <input ref={profileRef} style={S.input} defaultValue={sale?.profile_id ?? ""} placeholder="Es. account_principale" />
+            <select value={selectedProfile} onChange={e => setSelectedProfile(e.target.value)} style={S.input}>
+              <option value="">— Nessun profilo —</option>
+              {profiles.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 
