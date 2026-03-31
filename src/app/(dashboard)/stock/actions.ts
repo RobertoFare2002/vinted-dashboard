@@ -279,20 +279,23 @@ export async function bulkSellStockItems(input: {
 }
 
 // ── CONCLUDI vendita a blocco → tutti gli articoli diventano sold ─────────────
+// Supporta nuovo formato (saleIds = [id]) e vecchio formato (saleIds = [id1, id2, ...])
 
 export async function concludeBulkSale(input: {
-  saleId:   string;
+  saleIds:  string[];
   stockIds: string[];
 }) {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const { error: saleError } = await supabase
-    .from("sales_log")
-    .update({ status: "closed", updated_at: new Date().toISOString() })
-    .eq("id", input.saleId)
-    .eq("user_id", user.id);
+  for (const saleId of input.saleIds) {
+    const { error: saleError } = await supabase
+      .from("sales_log")
+      .update({ status: "closed", updated_at: new Date().toISOString() })
+      .eq("id", saleId)
+      .eq("user_id", user.id);
 
-  if (saleError) throw new Error("Errore conclusione vendita: " + saleError.message);
+    if (saleError) throw new Error("Errore conclusione vendita: " + saleError.message);
+  }
 
   for (const stockId of input.stockIds) {
     const { error: stockError } = await supabase
@@ -309,20 +312,23 @@ export async function concludeBulkSale(input: {
 }
 
 // ── ANNULLA vendita a blocco → tutti gli articoli tornano available ───────────
+// Supporta nuovo formato (saleIds = [id]) e vecchio formato (saleIds = [id1, id2, ...])
 
 export async function cancelBulkSale(input: {
-  saleId:   string;
+  saleIds:  string[];
   stockIds: string[];
 }) {
   const { supabase, user } = await getAuthenticatedClient();
 
-  const { error: deleteError } = await supabase
-    .from("sales_log")
-    .delete()
-    .eq("id", input.saleId)
-    .eq("user_id", user.id);
+  for (const saleId of input.saleIds) {
+    const { error: deleteError } = await supabase
+      .from("sales_log")
+      .delete()
+      .eq("id", saleId)
+      .eq("user_id", user.id);
 
-  if (deleteError) throw new Error("Errore eliminazione vendita: " + deleteError.message);
+    if (deleteError) throw new Error("Errore eliminazione vendita: " + deleteError.message);
+  }
 
   for (const stockId of input.stockIds) {
     const { error: stockError } = await supabase

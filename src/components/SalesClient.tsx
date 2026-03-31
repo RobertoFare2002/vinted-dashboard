@@ -12,7 +12,8 @@ type SaleRow = {
   profile_id: string | null;
   raw_data: {
     stock_id?: string;
-    bulk?: boolean;
+    bulk_id?:  string;    // vecchio formato
+    bulk?:     boolean;   // nuovo formato
     bulk_size?: number;
     items?: { stock_id: string; name: string; sale_price: number; cost: number }[];
   } | null;
@@ -78,7 +79,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<{ saleId: string; stockIds: string[]; isBulk: boolean } | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<{ saleIds: string[]; stockIds: string[] } | null>(null);
   const [expanded, setExpanded]         = useState<string | null>(null);
 
   // Anni disponibili
@@ -131,24 +132,24 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
     setActionId(s.id);
     startTransition(async () => { await changeSaleStatus(s.id, next as "open" | "closed"); setActionId(null); });
   }
-  function handleCancel(saleId: string, stockIds: string[], isBulk: boolean) {
-    setConfirmCancel(null); setActionId(saleId);
+  function handleCancel(saleIds: string[], stockIds: string[]) {
+    setConfirmCancel(null); setActionId(saleIds[0]);
     startTransition(async () => {
-      if (isBulk) {
-        await cancelBulkSale({ saleId, stockIds });
+      if (saleIds.length > 1 || stockIds.length > 1) {
+        await cancelBulkSale({ saleIds, stockIds });
       } else {
-        await cancelSale({ saleId, stockId: stockIds[0] });
+        await cancelSale({ saleId: saleIds[0], stockId: stockIds[0] });
       }
       setActionId(null);
     });
   }
-  function handleConclude(saleId: string, stockIds: string[], isBulk: boolean) {
-    setActionId(saleId);
+  function handleConclude(saleIds: string[], stockIds: string[]) {
+    setActionId(saleIds[0]);
     startTransition(async () => {
-      if (isBulk) {
-        await concludeBulkSale({ saleId, stockIds });
+      if (saleIds.length > 1 || stockIds.length > 1) {
+        await concludeBulkSale({ saleIds, stockIds });
       } else {
-        await concludeSale({ saleId, stockId: stockIds[0] });
+        await concludeSale({ saleId: saleIds[0], stockId: stockIds[0] });
       }
       setActionId(null);
     });
@@ -219,7 +220,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
               <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginBottom: 24 }}>L&apos;articolo tornerà disponibile in magazzino.</div>
               <div style={{ display: "flex", gap: 10 }}>
                 <GlassBtn onClick={() => setConfirmCancel(null)} color="rgba(255,255,255,.4)">Chiudi</GlassBtn>
-                <GlassBtn onClick={() => handleCancel(confirmCancel.saleId, confirmCancel.stockIds, confirmCancel.isBulk)} color={G.amber}>Annulla vendita</GlassBtn>
+                <GlassBtn onClick={() => handleCancel(confirmCancel.saleIds, confirmCancel.stockIds)} color={G.amber}>Annulla vendita</GlassBtn>
               </div>
             </div>
           </div>
@@ -390,7 +391,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
                     backdropFilter: G.blur, color: st.color, transition: "all .15s",
                     fontFamily: "inherit",
                   }}>{st.label}</button>
-                  {s.raw_data?.bulk && (
+                  {(s.raw_data?.bulk || s.raw_data?.bulk_id) && (
                     <span style={{
                       fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 10,
                       background: "rgba(79,142,247,.12)", border: "1px solid rgba(79,142,247,.3)",
@@ -409,19 +410,30 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
                     background: "rgba(0,0,0,.25)",
                   }}>
                     <GlassBtn onClick={() => { setExpanded(null); setModal({ mode: "edit", sale: s }); }} color="rgba(255,255,255,.5)">✏️ Modifica</GlassBtn>
-                    {(s.raw_data?.stock_id || s.raw_data?.bulk) && s.status === "open" && (() => {
-                      const isBulk = !!s.raw_data?.bulk;
-                      const stockIds = isBulk
-                        ? (s.raw_data?.items ?? []).map(i => i.stock_id)
-                        : [s.raw_data!.stock_id!];
-                      return <GlassBtn onClick={() => handleConclude(s.id, stockIds, isBulk)} color={G.accent}>✅ Concludi</GlassBtn>;
-                    })()}
-                    {(s.raw_data?.stock_id || s.raw_data?.bulk) && (() => {
-                      const isBulk = !!s.raw_data?.bulk;
-                      const stockIds = isBulk
-                        ? (s.raw_data?.items ?? []).map(i => i.stock_id)
-                        : [s.raw_data!.stock_id!];
-                      return <GlassBtn onClick={() => setConfirmCancel({ saleId: s.id, stockIds, isBulk })} color={G.amber}>↩ Annulla</GlassBtn>;
+                    {(s.raw_data?.stock_id || s.raw_data?.bulk || s.raw_data?.bulk_id) && (() => {
+                      // Nuovo formato: una riga con raw_data.bulk + items
+                      // Vecchio formato: N righe con raw_data.bulk_id condiviso
+                      let saleIds: string[];
+                      let stockIds: string[];
+                      if (s.raw_data?.bulk) {
+                        saleIds  = [s.id];
+                        stockIds = (s.raw_data.items ?? []).map(i => i.stock_id);
+                      } else if (s.raw_data?.bulk_id) {
+                        const related = initialSales.filter(r => r.raw_data?.bulk_id === s.raw_data?.bulk_id);
+                        saleIds  = related.map(r => r.id);
+                        stockIds = related.map(r => r.raw_data?.stock_id).filter((x): x is string => !!x);
+                      } else {
+                        saleIds  = [s.id];
+                        stockIds = [s.raw_data!.stock_id!];
+                      }
+                      return (
+                        <>
+                          {s.status === "open" && (
+                            <GlassBtn onClick={() => handleConclude(saleIds, stockIds)} color={G.accent}>✅ Concludi</GlassBtn>
+                          )}
+                          <GlassBtn onClick={() => setConfirmCancel({ saleIds, stockIds })} color={G.amber}>↩ Annulla</GlassBtn>
+                        </>
+                      );
                     })()}
                     <button onClick={() => setConfirmDelete(s.id)} style={{
                       padding: "11px 14px", borderRadius: 12,
