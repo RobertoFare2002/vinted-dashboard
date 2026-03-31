@@ -79,11 +79,13 @@ export default function DashboardCharts({ sales, stock, profiles }: Props) {
   const closed  = filteredSales.filter(s => s.status === "closed");
   const open    = filteredSales.filter(s => s.status === "open");
 
-  const totalRevenue = closed.reduce((a: number, s: any) => a + Number(s.amount ?? 0), 0);
-  const totalCost    = filteredSales.reduce((a: number, s: any) => a + Number(s.cost ?? 0), 0);
-  const totalPending = open.reduce((a: number, s: any) => a + Number(s.amount ?? 0), 0);
-  const profit       = totalRevenue - totalCost;
-  const avgMargin    = totalCost > 0 ? Math.round(((totalRevenue - totalCost) / totalCost) * 100) : 0;
+  const totalRevenue  = closed.reduce((a: number, s: any) => a + Number(s.amount ?? 0), 0);
+  const totalCost     = filteredSales.reduce((a: number, s: any) => a + Number(s.cost ?? 0), 0);
+  const totalPending  = open.reduce((a: number, s: any) => a + Number(s.amount ?? 0), 0);
+  const pendingCost   = open.reduce((a: number, s: any) => a + Number(s.cost ?? 0), 0);
+  const profit        = (totalRevenue + totalPending) - totalCost;
+  const pendingProfit = totalPending - pendingCost;
+  const avgMargin     = totalCost > 0 ? Math.round(((totalRevenue - (totalCost - pendingCost)) / (totalCost - pendingCost)) * 100) : 0;
   const staleItems   = filteredStock.filter((i: any) => i.purchased_at && i.status === "available" && Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60).length;
   const stockCount   = filteredStock.filter((i: any) => i.status === "available").length;
 
@@ -183,7 +185,7 @@ export default function DashboardCharts({ sales, stock, profiles }: Props) {
     { label:"Totale vendite",  value:`€${fmt(totalRevenue+totalPending)}`, color:PURPLE, sub:"concluse + sospeso" },
     { label:"N° Vendite",      value:String(closed.length),                color:ACCENT, sub:`${filteredSales.length} tot · €${fmt(totalRevenue)}` },
     { label:"Costi acquisti",  value:`€${fmt(totalCost)}`,                 color:DANGER, sub:`${filteredSales.length} totali` },
-    { label:"Profitto netto",  value:`€${fmt(profit)}`,                    color:profit>=0?ACCENT:DANGER, sub:`margine ${avgMargin}%` },
+    { label:"Profitto netto",  value:`€${fmt(profit)}`,                    color:profit>=0?ACCENT:DANGER, sub:`di cui in sospeso €${fmt(pendingProfit)}` },
     { label:"In sospeso",      value:String(open.length),                  color:AMBER,  sub:"vendite aperte" },
     { label:"Stock",           value:`${stockCount} art.`,                 color:BLUE,   sub:`${staleItems} fermi >60gg` },
   ];
