@@ -278,33 +278,57 @@ export async function bulkSellStockItems(input: {
   revalidatePath("/sales");
 }
 
-// ── CONCLUDI vendita a blocco → tutti gli articoli diventano sold ─────────────
-// Supporta nuovo formato (saleIds = [id]) e vecchio formato (saleIds = [id1, id2, ...])
+// ── Helper: estrae tutti gli stock_id da un raw_data (nuovo e vecchio formato) ─
 
-export async function concludeBulkSale(input: {
-  saleIds:  string[];
-  stockIds: string[];
-}) {
+function extractStockIds(rawData: unknown): string[] {
+  if (!rawData || typeof rawData !== "object") return [];
+  const rd = rawData as Record<string, unknown>;
+  const ids: string[] = [];
+  if (typeof rd.stock_id === "string") ids.push(rd.stock_id);
+  if (Array.isArray(rd.items)) {
+    for (const item of rd.items) {
+      if (item && typeof item === "object" && typeof (item as Record<string,unknown>).stock_id === "string") {
+        ids.push((item as Record<string,unknown>).stock_id as string);
+      }
+    }
+  }
+  return ids;
+}
+
+// ── CONCLUDI vendita a blocco → tutti gli articoli diventano sold ─────────────
+// Il server legge raw_data dal DB per ricavare gli stock_id — non dipende dal client.
+
+export async function concludeBulkSale(input: { saleIds: string[] }) {
   const { supabase, user } = await getAuthenticatedClient();
+  const stockIds = new Set<string>();
 
   for (const saleId of input.saleIds) {
-    const { error: saleError } = await supabase
+    const { data: sale } = await supabase
+      .from("sales_log")
+      .select("raw_data")
+      .eq("id", saleId)
+      .eq("user_id", user.id)
+      .single();
+
+    for (const sid of extractStockIds(sale?.raw_data)) stockIds.add(sid);
+
+    const { error } = await supabase
       .from("sales_log")
       .update({ status: "closed", updated_at: new Date().toISOString() })
       .eq("id", saleId)
       .eq("user_id", user.id);
 
-    if (saleError) throw new Error("Errore conclusione vendita: " + saleError.message);
+    if (error) throw new Error("Errore conclusione vendita: " + error.message);
   }
 
-  for (const stockId of input.stockIds) {
-    const { error: stockError } = await supabase
+  for (const stockId of stockIds) {
+    const { error } = await supabase
       .from("stock_log")
       .update({ status: "sold", updated_at: new Date().toISOString() })
       .eq("id", stockId)
       .eq("user_id", user.id);
 
-    if (stockError) throw new Error("Errore aggiornamento magazzino: " + stockError.message);
+    if (error) throw new Error("Errore aggiornamento magazzino: " + error.message);
   }
 
   revalidatePath("/stock");
@@ -312,32 +336,39 @@ export async function concludeBulkSale(input: {
 }
 
 // ── ANNULLA vendita a blocco → tutti gli articoli tornano available ───────────
-// Supporta nuovo formato (saleIds = [id]) e vecchio formato (saleIds = [id1, id2, ...])
+// Il server legge raw_data dal DB per ricavare gli stock_id — non dipende dal client.
 
-export async function cancelBulkSale(input: {
-  saleIds:  string[];
-  stockIds: string[];
-}) {
+export async function cancelBulkSale(input: { saleIds: string[] }) {
   const { supabase, user } = await getAuthenticatedClient();
+  const stockIds = new Set<string>();
 
   for (const saleId of input.saleIds) {
-    const { error: deleteError } = await supabase
+    const { data: sale } = await supabase
+      .from("sales_log")
+      .select("raw_data")
+      .eq("id", saleId)
+      .eq("user_id", user.id)
+      .single();
+
+    for (const sid of extractStockIds(sale?.raw_data)) stockIds.add(sid);
+
+    const { error } = await supabase
       .from("sales_log")
       .delete()
       .eq("id", saleId)
       .eq("user_id", user.id);
 
-    if (deleteError) throw new Error("Errore eliminazione vendita: " + deleteError.message);
+    if (error) throw new Error("Errore eliminazione vendita: " + error.message);
   }
 
-  for (const stockId of input.stockIds) {
-    const { error: stockError } = await supabase
+  for (const stockId of stockIds) {
+    const { error } = await supabase
       .from("stock_log")
       .update({ status: "available", updated_at: new Date().toISOString() })
       .eq("id", stockId)
       .eq("user_id", user.id);
 
-    if (stockError) throw new Error("Errore ripristino magazzino: " + stockError.message);
+    if (error) throw new Error("Errore ripristino magazzino: " + error.message);
   }
 
   revalidatePath("/stock");

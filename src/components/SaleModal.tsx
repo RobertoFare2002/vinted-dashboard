@@ -19,15 +19,17 @@ type SaleRow = {
   profile_id:       string | null;
 };
 
-type Template = { id: string; name: string };
-type Profile  = { id: string; name: string };
+type Template  = { id: string; name: string };
+type Profile   = { id: string; name: string };
+type BulkItem  = { stock_id: string; name: string; sale_price: number; cost: number };
 
 type Props = {
-  mode:       "add" | "edit";
-  sale?:      SaleRow;
-  templates?: Template[];
-  profiles?:  Profile[];
-  onClose:    () => void;
+  mode:        "add" | "edit";
+  sale?:       SaleRow;
+  templates?:  Template[];
+  profiles?:   Profile[];
+  bulkItems?:  BulkItem[];
+  onClose:     () => void;
 };
 
 // ── Stili condivisi ───────────────────────────────────────────────────────────
@@ -71,7 +73,11 @@ const S = {
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export default function SaleModal({ mode, sale, templates = [], profiles = [], onClose }: Props) {
+function fmtM(n: number) {
+  return n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export default function SaleModal({ mode, sale, templates = [], profiles = [], bulkItems, onClose }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -209,6 +215,33 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], o
             </select>
           </div>
         </div>
+
+        {/* Articoli del blocco (sola lettura) */}
+        {bulkItems && bulkItems.length > 0 && (
+          <div style={S.field}>
+            <label style={S.label}>Articoli nel blocco ({bulkItems.length})</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {bulkItems.map((item, i) => (
+                <div key={item.stock_id || i} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "8px 11px", borderRadius: 9,
+                  background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)",
+                  gap: 8,
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {item.name || "—"}
+                  </span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.4)", flexShrink: 0 }}>
+                    costo €{fmtM(item.cost)}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#00e5c3", flexShrink: 0 }}>
+                    €{fmtM(item.sale_price)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Note */}
         <div style={S.field}>

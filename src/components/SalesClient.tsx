@@ -5,6 +5,8 @@ import { deleteSale, changeSaleStatus } from "@/app/(dashboard)/sales/actions";
 import { cancelSale, concludeSale, cancelBulkSale, concludeBulkSale } from "@/app/(dashboard)/stock/actions";
 import SaleModal from "@/components/SaleModal";
 
+type BulkItem = { stock_id: string; name: string; sale_price: number; cost: number };
+
 type SaleRow = {
   id: string; buyer_seller: string | null; amount: number | null; cost: number | null;
   platform: string | null; status: string | null; notes: string | null;
@@ -15,7 +17,7 @@ type SaleRow = {
     bulk_id?:  string;    // vecchio formato
     bulk?:     boolean;   // nuovo formato
     bulk_size?: number;
-    items?: { stock_id: string; name: string; sale_price: number; cost: number }[];
+    items?:    BulkItem[];
   } | null;
 };
 type Template = { id: string; name: string };
@@ -70,7 +72,7 @@ function GlassBtn({ onClick, children, color = G.accent, disabled = false }: {
 }
 
 export default function SalesClient({ initialSales, templates, photoMap, profileMap, profiles }: Props) {
-  const [modal, setModal]               = useState<{ mode: "add" | "edit"; sale?: SaleRow } | null>(null);
+  const [modal, setModal]               = useState<{ mode: "add" | "edit"; sale?: SaleRow; bulkItems?: BulkItem[] } | null>(null);
   const [filter, setFilter]             = useState<"all" | "open" | "closed">("all");
   const [search, setSearch]             = useState("");
   const [filterProfile, setFilterProfile] = useState("");
@@ -79,7 +81,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<{ saleIds: string[]; stockIds: string[] } | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<SaleRow | null>(null);
   const [expanded, setExpanded]         = useState<string | null>(null);
 
   // Anni disponibili
@@ -132,24 +134,36 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
     setActionId(s.id);
     startTransition(async () => { await changeSaleStatus(s.id, next as "open" | "closed"); setActionId(null); });
   }
-  function handleCancel(saleIds: string[], stockIds: string[]) {
-    setConfirmCancel(null); setActionId(saleIds[0]);
+  function getBulkSaleIds(s: SaleRow): string[] {
+    if (s.raw_data?.bulk) return [s.id];
+    if (s.raw_data?.bulk_id) {
+      return initialSales
+        .filter(r => r.raw_data?.bulk_id === s.raw_data?.bulk_id)
+        .map(r => r.id);
+    }
+    return [];
+  }
+
+  function handleCancel(s: SaleRow) {
+    setConfirmCancel(null); setActionId(s.id);
     startTransition(async () => {
-      if (saleIds.length > 1 || stockIds.length > 1) {
-        await cancelBulkSale({ saleIds, stockIds });
+      const isBulk = !!(s.raw_data?.bulk || s.raw_data?.bulk_id);
+      if (isBulk) {
+        await cancelBulkSale({ saleIds: getBulkSaleIds(s) });
       } else {
-        await cancelSale({ saleId: saleIds[0], stockId: stockIds[0] });
+        await cancelSale({ saleId: s.id, stockId: s.raw_data!.stock_id! });
       }
       setActionId(null);
     });
   }
-  function handleConclude(saleIds: string[], stockIds: string[]) {
-    setActionId(saleIds[0]);
+  function handleConclude(s: SaleRow) {
+    setActionId(s.id);
     startTransition(async () => {
-      if (saleIds.length > 1 || stockIds.length > 1) {
-        await concludeBulkSale({ saleIds, stockIds });
+      const isBulk = !!(s.raw_data?.bulk || s.raw_data?.bulk_id);
+      if (isBulk) {
+        await concludeBulkSale({ saleIds: getBulkSaleIds(s) });
       } else {
-        await concludeSale({ saleId: saleIds[0], stockId: stockIds[0] });
+        await concludeSale({ saleId: s.id, stockId: s.raw_data!.stock_id! });
       }
       setActionId(null);
     });
@@ -196,7 +210,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
       `}</style>
 
       <div className="sales-client">
-        {modal && <SaleModal mode={modal.mode} sale={modal.sale} templates={templates} profiles={profiles} onClose={() => setModal(null)} />}
+        {modal && <SaleModal mode={modal.mode} sale={modal.sale} templates={templates} profiles={profiles} bulkItems={modal.bulkItems} onClose={() => setModal(null)} />}
 
         {confirmDelete && (
           <div style={overlayStyle} onClick={() => setConfirmDelete(null)}>
@@ -220,7 +234,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
               <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginBottom: 24 }}>L&apos;articolo tornerà disponibile in magazzino.</div>
               <div style={{ display: "flex", gap: 10 }}>
                 <GlassBtn onClick={() => setConfirmCancel(null)} color="rgba(255,255,255,.4)">Chiudi</GlassBtn>
-                <GlassBtn onClick={() => handleCancel(confirmCancel.saleIds, confirmCancel.stockIds)} color={G.amber}>Annulla vendita</GlassBtn>
+                <GlassBtn onClick={() => handleCancel(confirmCancel)} color={G.amber}>Annulla vendita</GlassBtn>
               </div>
             </div>
           </div>
@@ -409,32 +423,32 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
                     display: "flex", gap: 8, flexWrap: "wrap",
                     background: "rgba(0,0,0,.25)",
                   }}>
-                    <GlassBtn onClick={() => { setExpanded(null); setModal({ mode: "edit", sale: s }); }} color="rgba(255,255,255,.5)">✏️ Modifica</GlassBtn>
-                    {(s.raw_data?.stock_id || s.raw_data?.bulk || s.raw_data?.bulk_id) && (() => {
-                      // Nuovo formato: una riga con raw_data.bulk + items
-                      // Vecchio formato: N righe con raw_data.bulk_id condiviso
-                      let saleIds: string[];
-                      let stockIds: string[];
-                      if (s.raw_data?.bulk) {
-                        saleIds  = [s.id];
-                        stockIds = (s.raw_data.items ?? []).map(i => i.stock_id);
+                    <GlassBtn onClick={() => {
+                      setExpanded(null);
+                      // Calcola bulkItems per mostrare gli articoli nel modal di modifica
+                      let bulkItems: BulkItem[] | undefined;
+                      if (s.raw_data?.bulk && s.raw_data.items) {
+                        bulkItems = s.raw_data.items;
                       } else if (s.raw_data?.bulk_id) {
-                        const related = initialSales.filter(r => r.raw_data?.bulk_id === s.raw_data?.bulk_id);
-                        saleIds  = related.map(r => r.id);
-                        stockIds = related.map(r => r.raw_data?.stock_id).filter((x): x is string => !!x);
-                      } else {
-                        saleIds  = [s.id];
-                        stockIds = [s.raw_data!.stock_id!];
+                        bulkItems = initialSales
+                          .filter(r => r.raw_data?.bulk_id === s.raw_data?.bulk_id)
+                          .map(r => ({
+                            stock_id:   r.raw_data?.stock_id ?? "",
+                            name:       r.buyer_seller ?? "—",
+                            sale_price: Number(r.amount ?? 0),
+                            cost:       Number(r.cost ?? 0),
+                          }));
                       }
-                      return (
-                        <>
-                          {s.status === "open" && (
-                            <GlassBtn onClick={() => handleConclude(saleIds, stockIds)} color={G.accent}>✅ Concludi</GlassBtn>
-                          )}
-                          <GlassBtn onClick={() => setConfirmCancel({ saleIds, stockIds })} color={G.amber}>↩ Annulla</GlassBtn>
-                        </>
-                      );
-                    })()}
+                      setModal({ mode: "edit", sale: s, bulkItems });
+                    }} color="rgba(255,255,255,.5)">✏️ Modifica</GlassBtn>
+                    {(s.raw_data?.stock_id || s.raw_data?.bulk || s.raw_data?.bulk_id) && (
+                      <>
+                        {s.status === "open" && (
+                          <GlassBtn onClick={() => handleConclude(s)} color={G.accent}>✅ Concludi</GlassBtn>
+                        )}
+                        <GlassBtn onClick={() => setConfirmCancel(s)} color={G.amber}>↩ Annulla</GlassBtn>
+                      </>
+                    )}
                     <button onClick={() => setConfirmDelete(s.id)} style={{
                       padding: "11px 14px", borderRadius: 12,
                       border: `1px solid rgba(255,77,109,.25)`,
