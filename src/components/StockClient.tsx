@@ -16,6 +16,7 @@ type Props = {
   initialItems: StockItem[];
   photoMap:     Record<string, string>;
   profileMap:   Record<string, string>;
+  profiles:     { id: string; name: string }[];
 };
 
 const G = {
@@ -43,7 +44,7 @@ function daysSince(d: string | null) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
 }
 
-export default function StockClient({ initialItems, photoMap, profileMap }: Props) {
+export default function StockClient({ initialItems, photoMap, profileMap, profiles }: Props) {
   const [filterStatus, setFilterStatus] = useState("available");
   const [search, setSearch]             = useState("");
   const [sellTarget, setSellTarget]     = useState<StockItem | null>(null);
@@ -51,9 +52,18 @@ export default function StockClient({ initialItems, photoMap, profileMap }: Prop
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
+  const [filterProfile, setFilterProfile] = useState("");
+
+  const profileFiltered = useMemo(() => {
+    if (!filterProfile) return initialItems;
+    const profileName = profiles.find(p => p.id === filterProfile)?.name ?? "";
+    return initialItems.filter(i =>
+      i.profile_id === filterProfile || i.profile_id === profileName
+    );
+  }, [initialItems, filterProfile, profiles]);
 
   const items = useMemo(() => {
-    let list = initialItems;
+    let list = profileFiltered;
     if (filterStatus !== "all") list = list.filter(i => i.status === filterStatus);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -63,10 +73,10 @@ export default function StockClient({ initialItems, photoMap, profileMap }: Prop
       );
     }
     return list;
-  }, [initialItems, filterStatus, search, profileMap]);
+  }, [profileFiltered, filterStatus, search, profileMap]);
 
-  const available = initialItems.filter(i => i.status === "available");
-  const reserved  = initialItems.filter(i => i.status === "reserved");
+  const available = profileFiltered.filter(i => i.status === "available");
+  const reserved  = profileFiltered.filter(i => i.status === "reserved");
   const totalCost = available.reduce((s, i) => s + Number(i.purchase_price ?? 0) * Number(i.quantity ?? 1), 0);
   const stale     = available.filter(i => daysSince(i.purchased_at) > 60).length;
 
@@ -89,7 +99,7 @@ export default function StockClient({ initialItems, photoMap, profileMap }: Prop
   return (
     <>
       {sellTarget && <SellModal item={sellTarget} thumb={sellTarget.template_id_ext ? (photoMap[sellTarget.template_id_ext] ?? null) : null} onClose={() => setSellTarget(null)} />}
-      {editTarget && <StockEditModal item={editTarget} thumb={editTarget.template_id_ext ? (photoMap[editTarget.template_id_ext] ?? null) : null} onClose={() => setEditTarget(null)} />}
+      {editTarget && <StockEditModal item={editTarget} thumb={editTarget.template_id_ext ? (photoMap[editTarget.template_id_ext] ?? null) : null} onClose={() => setEditTarget(null)} profiles={profiles} />}
 
       {confirmDelete && (
         <div style={overlayStyle} onClick={() => setConfirmDelete(null)}>
@@ -140,16 +150,29 @@ export default function StockClient({ initialItems, photoMap, profileMap }: Prop
         ))}
       </div>
 
-      {/* Cerca */}
-      <div style={{ position: "relative", marginBottom: 14 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca articolo, profilo..."
-          style={{
-            width: "100%", padding: "11px 14px", borderRadius: 12,
-            border: `1px solid ${G.border}`, background: G.glass,
-            backdropFilter: G.blur, color: "rgba(255,255,255,.85)",
-            fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
-          }} />
-        <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "rgba(255,255,255,.2)" }}>{items.length}/{initialItems.length}</span>
+      {/* Cerca + Profilo */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca articolo..."
+            style={{
+              width: "100%", padding: "11px 14px", borderRadius: 12,
+              border: `1px solid ${G.border}`, background: G.glass,
+              backdropFilter: G.blur, color: "rgba(255,255,255,.85)",
+              fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
+            }} />
+          <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "rgba(255,255,255,.2)" }}>{items.length}/{initialItems.length}</span>
+        </div>
+        <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)} style={{
+          padding: "11px 12px", borderRadius: 12, flexShrink: 0,
+          border: filterProfile ? `1px solid rgba(0,229,195,.3)` : `1px solid ${G.border}`,
+          background: filterProfile ? "rgba(0,229,195,.08)" : G.glass,
+          backdropFilter: G.blur, color: filterProfile ? G.accent : "rgba(255,255,255,.55)",
+          fontSize: 13, outline: "none", fontFamily: "inherit",
+          colorScheme: "dark", cursor: "pointer",
+        }}>
+          <option value="">Tutti i profili</option>
+          {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
       </div>
 
       {/* Lista */}

@@ -1,5 +1,6 @@
 "use client";
 // src/components/DashboardCharts.tsx
+import { useState, useMemo } from "react";
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -25,31 +26,209 @@ const TT = {
   cursor:       { fill:"rgba(255,255,255,.04)" },
 };
 
+const MONTHS = [
+  ["01","Gennaio"],["02","Febbraio"],["03","Marzo"],["04","Aprile"],
+  ["05","Maggio"],["06","Giugno"],["07","Luglio"],["08","Agosto"],
+  ["09","Settembre"],["10","Ottobre"],["11","Novembre"],["12","Dicembre"],
+] as const;
+
 interface Props {
-  kpi: { totalRevenue:number; totalCost:number; profit:number; avgMargin:number; totalPending:number; totalSales:number; closedSales:number; pendingSales:number; staleItems:number; stockCount:number };
-  revenueByMonth:  { month:string; ricavi:number; costi:number; profitto:number; vendite:number }[];
-  topProducts:     { name:string; profitto:number; margine:number }[];
-  byProfile:       { name:string; ricavi:number; vendite:number }[];
-  staleStock:      { name:string; days:number; cost:number; profile:string }[];
-  marginsByFascia: { fascia:string; margine:number; ricavi:number }[];
+  sales:    any[];
+  stock:    any[];
+  profiles: { id: string; name: string }[];
 }
 
-export default function DashboardCharts({ kpi, revenueByMonth, topProducts, byProfile, staleStock, marginsByFascia }: Props) {
-  const { totalRevenue, totalCost, profit, avgMargin, totalPending, closedSales, pendingSales, staleItems, stockCount, totalSales } = kpi;
+export default function DashboardCharts({ sales, stock, profiles }: Props) {
+  const [filterProfile, setFilterProfile] = useState("");
+  const [filterYear,    setFilterYear]    = useState("");
+  const [filterMonth,   setFilterMonth]   = useState("");
+
+  const profileNamesMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const p of profiles) m[p.id] = p.name;
+    return m;
+  }, [profiles]);
+
+  const years = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of sales) {
+      const y = String(s.transaction_date ?? "").slice(0, 4);
+      if (y.length === 4) set.add(y);
+    }
+    return Array.from(set).sort().reverse();
+  }, [sales]);
+
+  const filteredSales = useMemo(() => {
+    let list = sales;
+    if (filterProfile) list = list.filter(s => s.profile_id === filterProfile);
+    if (filterYear)    list = list.filter(s => String(s.transaction_date ?? "").slice(0, 4) === filterYear);
+    if (filterMonth)   list = list.filter(s => String(s.transaction_date ?? "").slice(5, 7) === filterMonth);
+    return list;
+  }, [sales, filterProfile, filterYear, filterMonth]);
+
+  const filteredStock = useMemo(() => {
+    if (!filterProfile) return stock;
+    return stock.filter(i => i.profile_id === filterProfile);
+  }, [stock, filterProfile]);
+
+  const nowTs   = Date.now();
+  const closed  = filteredSales.filter(s => s.status === "closed");
+  const open    = filteredSales.filter(s => s.status === "open");
+
+  const totalRevenue = closed.reduce((a: number, s: any) => a + Number(s.amount ?? 0), 0);
+  const totalCost    = filteredSales.reduce((a: number, s: any) => a + Number(s.cost ?? 0), 0);
+  const totalPending = open.reduce((a: number, s: any) => a + Number(s.amount ?? 0), 0);
+  const profit       = totalRevenue - totalCost;
+  const avgMargin    = totalCost > 0 ? Math.round(((totalRevenue - totalCost) / totalCost) * 100) : 0;
+  const staleItems   = filteredStock.filter((i: any) => i.purchased_at && i.status === "available" && Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60).length;
+  const stockCount   = filteredStock.filter((i: any) => i.status === "available").length;
+
+  const revenueByMonth = useMemo(() => {
+    type M = { revenue: number; cost: number; count: number; total: number };
+    const map: Record<string, M> = {};
+    for (const s of filteredSales) {
+      const m = String(s.transaction_date ?? "").slice(0, 7);
+      if (!m) continue;
+      if (!map[m]) map[m] = { revenue: 0, cost: 0, count: 0, total: 0 };
+      if (s.status === "closed") map[m].revenue += Number(s.amount ?? 0);
+      map[m].total += Number(s.amount ?? 0);
+      map[m].cost  += Number(s.cost   ?? 0);
+      map[m].count += 1;
+    }
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-8)
+      .map(([month, v]) => ({
+        month:    new Date(month + "-01").toLocaleDateString("it", { month: "short", year: "2-digit" }),
+        ricavi:   +v.revenue.toFixed(2),
+        costi:    +v.cost.toFixed(2),
+        totale:   +v.total.toFixed(2),
+        profitto: +(v.revenue - v.cost).toFixed(2),
+        vendite:  v.count,
+      }));
+  }, [filteredSales]);
+
+  const topProducts = useMemo(() => {
+    const map: Record<string, { name: string; revenue: number; cost: number; count: number }> = {};
+    for (const s of closed) {
+      const key = String(s.buyer_seller || "Sconosciuto").trim();
+      if (!map[key]) map[key] = { name: key, revenue: 0, cost: 0, count: 0 };
+      map[key].revenue += Number(s.amount ?? 0);
+      map[key].cost    += Number(s.cost   ?? 0);
+      map[key].count   += 1;
+    }
+    return Object.values(map)
+      .sort((a, b) => (b.revenue - b.cost) - (a.revenue - a.cost))
+      .slice(0, 8)
+      .map(p => ({
+        name:     p.name.length > 22 ? p.name.slice(0, 22) + "…" : p.name,
+        profitto: +(p.revenue - p.cost).toFixed(2),
+        margine:  p.cost > 0 ? Math.round(((p.revenue - p.cost) / p.cost) * 100) : 0,
+      }));
+  }, [closed]);
+
+  const byProfile = useMemo(() => {
+    const map: Record<string, { revenue: number; count: number }> = {};
+    for (const s of closed) {
+      const pid  = String(s.profile_id || "Nessuno");
+      const name = profileNamesMap[pid] ?? pid;
+      if (!map[name]) map[name] = { revenue: 0, count: 0 };
+      map[name].revenue += Number(s.amount ?? 0);
+      map[name].count   += 1;
+    }
+    return Object.entries(map)
+      .sort(([, a], [, b]) => b.revenue - a.revenue)
+      .map(([name, v]) => ({ name, ricavi: +v.revenue.toFixed(2), vendite: v.count }));
+  }, [closed, profileNamesMap]);
+
+  const staleStock = useMemo(() => {
+    return filteredStock
+      .filter((i: any) => i.purchased_at && i.status === "available")
+      .map((i: any) => ({
+        name:    String(i.name || "—").slice(0, 28),
+        days:    Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000),
+        cost:    Number(i.purchase_price ?? 0),
+        profile: profileNamesMap[i.profile_id] ?? String(i.profile_id || "—").slice(0, 12),
+      }))
+      .sort((a: any, b: any) => b.days - a.days)
+      .slice(0, 8);
+  }, [filteredStock, profileNamesMap, nowTs]);
+
+  const marginsByFascia = useMemo(() => {
+    const fasceMap: Record<string, { revenue: number; cost: number }> = {
+      "0–20€":   { revenue: 0, cost: 0 },
+      "20–50€":  { revenue: 0, cost: 0 },
+      "50–100€": { revenue: 0, cost: 0 },
+      "100€+":   { revenue: 0, cost: 0 },
+    };
+    for (const s of closed) {
+      const amt = Number(s.amount ?? 0);
+      const cst = Number(s.cost   ?? 0);
+      const key = amt < 20 ? "0–20€" : amt < 50 ? "20–50€" : amt < 100 ? "50–100€" : "100€+";
+      fasceMap[key].revenue += amt;
+      fasceMap[key].cost    += cst;
+    }
+    return Object.entries(fasceMap).map(([fascia, v]) => ({
+      fascia,
+      margine: v.cost > 0 ? Math.round(((v.revenue - v.cost) / v.cost) * 100) : 0,
+      ricavi:  +v.revenue.toFixed(2),
+    }));
+  }, [closed]);
 
   const kpiItems = [
     { label:"Totale vendite",  value:`€${fmt(totalRevenue+totalPending)}`, color:PURPLE, sub:"concluse + sospeso" },
-    { label:"Ricavi conclusi", value:`€${fmt(totalRevenue)}`,              color:ACCENT, sub:`${closedSales} vendite` },
-    { label:"Costi acquisti",  value:`€${fmt(totalCost)}`,                 color:DANGER, sub:`${totalSales} totali` },
+    { label:"Ricavi conclusi", value:`€${fmt(totalRevenue)}`,              color:ACCENT, sub:`${closed.length} vendite` },
+    { label:"Costi acquisti",  value:`€${fmt(totalCost)}`,                 color:DANGER, sub:`${filteredSales.length} totali` },
     { label:"Profitto netto",  value:`€${fmt(profit)}`,                    color:profit>=0?ACCENT:DANGER, sub:`margine ${avgMargin}%` },
-    { label:"In sospeso",      value:String(pendingSales),                 color:AMBER,  sub:"vendite aperte" },
+    { label:"In sospeso",      value:String(open.length),                  color:AMBER,  sub:"vendite aperte" },
     { label:"Stock",           value:`${stockCount} art.`,                 color:BLUE,   sub:`${staleItems} fermi >60gg` },
   ];
+
+  const selStyle: React.CSSProperties = {
+    padding: "9px 12px", borderRadius: 10,
+    border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.045)",
+    color: "rgba(255,255,255,.55)", fontSize: 12, outline: "none",
+    fontFamily: "inherit", colorScheme: "dark", cursor: "pointer",
+  };
+  const selActiveStyle: React.CSSProperties = {
+    ...selStyle,
+    border: "1px solid rgba(0,229,195,.3)",
+    background: "rgba(0,229,195,.08)",
+    color: ACCENT,
+  };
+  const hasFilter = !!(filterProfile || filterYear || filterMonth);
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
 
-      {/* KPI grid — 2 col mobile, 3 tablet, 6 desktop */}
+      {/* Filter bar */}
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center", marginBottom:4 }}>
+        <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)}
+          style={filterProfile ? selActiveStyle : selStyle}>
+          <option value="">Tutti i profili</option>
+          {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <select value={filterYear} onChange={e => { setFilterYear(e.target.value); if (!e.target.value) setFilterMonth(""); }}
+          style={filterYear ? selActiveStyle : selStyle}>
+          <option value="">Tutti gli anni</option>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        {filterYear && (
+          <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+            style={filterMonth ? selActiveStyle : selStyle}>
+            <option value="">Tutti i mesi</option>
+            {MONTHS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        )}
+        {hasFilter && (
+          <button onClick={() => { setFilterProfile(""); setFilterYear(""); setFilterMonth(""); }}
+            style={{ padding:"9px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,.1)", background:"transparent", color:"rgba(255,255,255,.4)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+            ✕ Reset
+          </button>
+        )}
+      </div>
+
+      {/* KPI grid */}
       <div className="kpi-grid">
         {kpiItems.map(({label,value,color,sub})=>(
           <div key={label} style={{background:C.bg,border:`1px solid ${C.border}`,borderBottom:`2px solid ${color}`,borderRadius:14,padding:"14px 14px",position:"relative",overflow:"hidden"}}>
@@ -162,7 +341,7 @@ export default function DashboardCharts({ kpi, revenueByMonth, topProducts, byPr
             <span style={{fontSize:11,color:"rgba(255,255,255,.35)"}}>dal più vecchio</span>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {staleStock.map((item,i)=>{
+            {staleStock.map((item: any,i: number)=>{
               const pct   = Math.min(100,Math.round((item.days/180)*100));
               const color = item.days>120?DANGER:item.days>60?AMBER:BLUE;
               return (

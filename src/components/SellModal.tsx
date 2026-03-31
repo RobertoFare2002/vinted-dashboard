@@ -38,7 +38,7 @@ const S = {
     width: "100%", padding: "9px 12px", borderRadius: 10,
     border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.06)",
     color: "rgba(255,255,255,.92)", fontSize: 14, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box" as const,
+    outline: "none", boxSizing: "border-box" as const, colorScheme: "dark" as const,
   },
 };
 

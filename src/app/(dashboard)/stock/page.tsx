@@ -145,7 +145,7 @@ export default async function StockPage() {
           {available} disponibili · {reserved} in sospeso · {sold} venduti · {items.length} totali
         </p>
       </div>
-      <StockClient initialItems={items} photoMap={photoMap} profileMap={profileMap} />
+      <StockClient initialItems={items} photoMap={photoMap} profileMap={profileMap} profiles={profiles} />
     </div>
   );
 }

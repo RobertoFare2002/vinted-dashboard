@@ -176,9 +176,9 @@ export async function updateStockItem(id: string, input: {
   quantity:       number;
   purchase_price: number | null;
   purchased_at:   string | null;
-  location:       string;
   notes:          string;
   status:         string;
+  profile_id:     string | null;
 }) {
   const { supabase, user } = await getAuthenticatedClient();
 
@@ -190,9 +190,9 @@ export async function updateStockItem(id: string, input: {
       quantity:       input.quantity,
       purchase_price: input.purchase_price,
       purchased_at:   input.purchased_at || null,
-      location:       input.location.trim() || null,
       notes:          input.notes.trim()    || null,
       status:         input.status,
+      profile_id:     input.profile_id      || null,
       updated_at:     new Date().toISOString(),
     })
     .eq("id", id)

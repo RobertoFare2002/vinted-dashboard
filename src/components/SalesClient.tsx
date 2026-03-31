@@ -17,6 +17,7 @@ type Props = {
   templates:    Template[];
   photoMap:     Record<string, string>;
   profileMap:   Record<string, string>;
+  profiles:     { id: string; name: string }[];
 };
 
 const G = {
@@ -61,18 +62,28 @@ function GlassBtn({ onClick, children, color = G.accent, disabled = false }: {
   );
 }
 
-export default function SalesClient({ initialSales, templates, photoMap, profileMap }: Props) {
+export default function SalesClient({ initialSales, templates, photoMap, profileMap, profiles }: Props) {
   const [modal, setModal]               = useState<{ mode: "add" | "edit"; sale?: SaleRow } | null>(null);
   const [filter, setFilter]             = useState<"all" | "open" | "closed">("all");
   const [search, setSearch]             = useState("");
+  const [filterProfile, setFilterProfile] = useState("");
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<{ saleId: string; stockId: string } | null>(null);
   const [expanded, setExpanded]         = useState<string | null>(null);
 
+  // Lista filtrata per profilo — usata sia per KPI che per lista
+  const profileFiltered = useMemo(() => {
+    if (!filterProfile) return initialSales;
+    const profileName = profiles.find(p => p.id === filterProfile)?.name ?? "";
+    return initialSales.filter(s =>
+      s.profile_id === filterProfile || s.profile_id === profileName
+    );
+  }, [initialSales, filterProfile, profiles]);
+
   const sales = useMemo(() => {
-    let list = initialSales;
+    let list = profileFiltered;
     if (filter !== "all") list = list.filter(s => s.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -83,12 +94,12 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
       );
     }
     return list;
-  }, [initialSales, filter, search, profileMap]);
+  }, [profileFiltered, filter, search, profileMap]);
 
-  const revenue = initialSales.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
-  const costs   = initialSales.reduce((a, s) => a + Number(s.cost ?? 0), 0);
+  const revenue = profileFiltered.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const costs   = profileFiltered.reduce((a, s) => a + Number(s.cost ?? 0), 0);
   const profit  = revenue - costs;
-  const pending = initialSales.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const pending = profileFiltered.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
 
   function handleDelete(id: string) {
     setConfirmDelete(null); setActionId(id);
@@ -218,6 +229,19 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
               backdropFilter: G.blur, color: "rgba(255,255,255,.85)",
               fontSize: 13, outline: "none", fontFamily: "inherit",
             }} />
+          <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)} style={{
+            padding: "11px 12px", borderRadius: 12, flexShrink: 0,
+            border: `1px solid ${filterProfile ? "rgba(0,229,195,.3)" : G.border}`,
+            background: filterProfile ? "rgba(0,229,195,.08)" : G.glass,
+            backdropFilter: G.blur, color: filterProfile ? G.accent : "rgba(255,255,255,.55)",
+            fontSize: 13, outline: "none", fontFamily: "inherit",
+            colorScheme: "dark", cursor: "pointer",
+          }}>
+            <option value="">Tutti i profili</option>
+            {profiles.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Filtri */}

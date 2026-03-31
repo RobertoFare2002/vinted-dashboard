@@ -1,19 +1,22 @@
 // src/components/StockEditModal.tsx
 "use client";
 
-import { useRef, useTransition, useState } from "react";
+import { useRef, useTransition, useState, useMemo } from "react";
 import { updateStockItem } from "@/app/(dashboard)/stock/actions";
 
 type StockItem = {
   id: string; name: string|null; size: string|null; quantity: number|null;
   purchase_price: number|null; purchased_at: string|null; location: string|null;
-  status: string|null; template_id_ext: string|null;
+  status: string|null; template_id_ext: string|null; profile_id: string|null;
 };
 
+type Profile = { id: string; name: string };
+
 type Props = {
-  item:    StockItem;
-  thumb:   string | null;
-  onClose: () => void;
+  item:     StockItem;
+  thumb:    string | null;
+  onClose:  () => void;
+  profiles: Profile[];
 };
 
 const S = {
@@ -39,7 +42,7 @@ const S = {
     width: "100%", padding: "11px 13px", borderRadius: 11,
     border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.05)",
     color: "rgba(255,255,255,.9)", fontSize: 14, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box" as const,
+    outline: "none", boxSizing: "border-box" as const, colorScheme: "dark" as const,
   },
   field: { marginBottom: 14 },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 14px" },
@@ -52,18 +55,27 @@ const STATUSES = [
   { value: "archived",  label: "Archiviato"   },
 ];
 
-export default function StockEditModal({ item, thumb, onClose }: Props) {
+export default function StockEditModal({ item, thumb, onClose, profiles }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const nameRef    = useRef<HTMLInputElement>(null);
-  const sizeRef    = useRef<HTMLInputElement>(null);
-  const qtyRef     = useRef<HTMLInputElement>(null);
-  const priceRef   = useRef<HTMLInputElement>(null);
-  const dateRef    = useRef<HTMLInputElement>(null);
-  const locationRef = useRef<HTMLInputElement>(null);
-  const notesRef   = useRef<HTMLTextAreaElement>(null);
-  const statusRef  = useRef<HTMLSelectElement>(null);
+  const nameRef   = useRef<HTMLInputElement>(null);
+  const sizeRef   = useRef<HTMLInputElement>(null);
+  const qtyRef    = useRef<HTMLInputElement>(null);
+  const priceRef  = useRef<HTMLInputElement>(null);
+  const dateRef   = useRef<HTMLInputElement>(null);
+  const notesRef  = useRef<HTMLTextAreaElement>(null);
+  const statusRef = useRef<HTMLSelectElement>(null);
+
+  // Risolve profile_id che potrebbe essere UUID o nome legacy
+  const resolvedProfileId = useMemo(() => {
+    if (!item.profile_id) return "";
+    if (profiles.some(p => p.id === item.profile_id)) return item.profile_id;
+    const byName = profiles.find(p => p.name === item.profile_id);
+    return byName?.id ?? "";
+  }, [item.profile_id, profiles]);
+
+  const [selectedProfile, setSelectedProfile] = useState(resolvedProfileId);
 
   const defaultDate = item.purchased_at
     ? new Date(item.purchased_at).toISOString().slice(0, 10)
@@ -82,9 +94,9 @@ export default function StockEditModal({ item, thumb, onClose }: Props) {
           quantity:       parseInt(qtyRef.current?.value ?? "1") || 1,
           purchase_price: priceRef.current?.value ? parseFloat(priceRef.current.value) : null,
           purchased_at:   dateRef.current?.value || null,
-          location:       locationRef.current?.value ?? "",
           notes:          notesRef.current?.value   ?? "",
           status:         statusRef.current?.value  ?? "available",
+          profile_id:     selectedProfile || null,
         });
         onClose();
       } catch (e: unknown) {
@@ -153,10 +165,15 @@ export default function StockEditModal({ item, thumb, onClose }: Props) {
           </select>
         </div>
 
-        {/* Posizione */}
+        {/* Nome utente */}
         <div style={S.field}>
-          <label style={S.label}>Posizione / Scaffale</label>
-          <input ref={locationRef} style={S.input} defaultValue={item.location ?? ""} placeholder="es. Scaffale A, Scatola 3" />
+          <label style={S.label}>Nome utente</label>
+          <select value={selectedProfile} onChange={e => setSelectedProfile(e.target.value)} style={{ ...S.input, appearance: "none" as const }}>
+            <option value="">— Nessun profilo —</option>
+            {profiles.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Note */}

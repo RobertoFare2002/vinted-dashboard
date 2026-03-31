@@ -57,6 +57,7 @@ export default async function SalesPage() {
         templates={templates.map(t => ({ id: t.id, name: t.name }))}
         photoMap={photoMap}
         profileMap={profileMap}
+        profiles={profiles}
       />
     </div>
   );
