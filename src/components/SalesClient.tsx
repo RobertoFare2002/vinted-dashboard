@@ -67,23 +67,38 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
   const [filter, setFilter]             = useState<"all" | "open" | "closed">("all");
   const [search, setSearch]             = useState("");
   const [filterProfile, setFilterProfile] = useState("");
+  const [filterYear,    setFilterYear]    = useState("");
+  const [filterMonth,   setFilterMonth]   = useState("");
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<{ saleId: string; stockId: string } | null>(null);
   const [expanded, setExpanded]         = useState<string | null>(null);
 
-  // Lista filtrata per profilo — usata sia per KPI che per lista
-  const profileFiltered = useMemo(() => {
-    if (!filterProfile) return initialSales;
-    const profileName = profiles.find(p => p.id === filterProfile)?.name ?? "";
-    return initialSales.filter(s =>
-      s.profile_id === filterProfile || s.profile_id === profileName
-    );
-  }, [initialSales, filterProfile, profiles]);
+  // Anni disponibili
+  const years = useMemo(() => {
+    const s = new Set<string>();
+    for (const sale of initialSales) {
+      const y = String(sale.transaction_date ?? "").slice(0, 4);
+      if (y.length === 4) s.add(y);
+    }
+    return Array.from(s).sort().reverse();
+  }, [initialSales]);
+
+  // Filtro base: profilo + anno + mese — usato per KPI e lista
+  const baseFiltered = useMemo(() => {
+    let list = initialSales;
+    if (filterProfile) {
+      const profileName = profiles.find(p => p.id === filterProfile)?.name ?? "";
+      list = list.filter(s => s.profile_id === filterProfile || s.profile_id === profileName);
+    }
+    if (filterYear)  list = list.filter(s => String(s.transaction_date ?? "").slice(0, 4) === filterYear);
+    if (filterMonth) list = list.filter(s => String(s.transaction_date ?? "").slice(5, 7) === filterMonth);
+    return list;
+  }, [initialSales, filterProfile, filterYear, filterMonth, profiles]);
 
   const sales = useMemo(() => {
-    let list = profileFiltered;
+    let list = baseFiltered;
     if (filter !== "all") list = list.filter(s => s.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -94,12 +109,12 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
       );
     }
     return list;
-  }, [profileFiltered, filter, search, profileMap]);
+  }, [baseFiltered, filter, search, profileMap]);
 
-  const revenue = profileFiltered.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
-  const costs   = profileFiltered.reduce((a, s) => a + Number(s.cost ?? 0), 0);
+  const revenue = baseFiltered.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const costs   = baseFiltered.reduce((a, s) => a + Number(s.cost ?? 0), 0);
   const profit  = revenue - costs;
-  const pending = profileFiltered.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const pending = baseFiltered.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
 
   function handleDelete(id: string) {
     setConfirmDelete(null); setActionId(id);
@@ -231,10 +246,18 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
             }} />
         </div>
 
-        {/* Filtro profilo — riga dedicata full-width */}
-        <div style={{ marginBottom: 10 }}>
+        {/* Sottotitolo dinamico */}
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)", marginBottom: 10 }}>
+          {baseFiltered.length} vendite{filterProfile || filterYear ? " · filtrate" : " totali"}
+          {filterProfile && (() => { const n = profiles.find(p => p.id === filterProfile)?.name; return n ? ` · ${n}` : ""; })()}
+          {filterYear && ` · ${filterYear}`}
+          {filterMonth && ` · ${["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"][parseInt(filterMonth)-1]}`}
+        </div>
+
+        {/* Filtri profilo + data */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" as const }}>
           <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)} style={{
-            width: "100%", padding: "11px 14px", borderRadius: 12, boxSizing: "border-box" as const,
+            flex: 1, minWidth: 0, padding: "11px 12px", borderRadius: 12, boxSizing: "border-box" as const,
             border: `1px solid ${filterProfile ? "rgba(0,229,195,.3)" : G.border}`,
             background: filterProfile ? "rgba(0,229,195,.08)" : G.glass,
             backdropFilter: G.blur, color: filterProfile ? G.accent : "rgba(255,255,255,.55)",
@@ -246,6 +269,32 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
+          <select value={filterYear} onChange={e => { setFilterYear(e.target.value); if (!e.target.value) setFilterMonth(""); }} style={{
+            padding: "11px 12px", borderRadius: 12, flexShrink: 0,
+            border: `1px solid ${filterYear ? "rgba(0,229,195,.3)" : G.border}`,
+            background: filterYear ? "rgba(0,229,195,.08)" : G.glass,
+            backdropFilter: G.blur, color: filterYear ? G.accent : "rgba(255,255,255,.55)",
+            fontSize: 13, outline: "none", fontFamily: "inherit",
+            colorScheme: "dark", cursor: "pointer",
+          }}>
+            <option value="">Anno</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {filterYear && (
+            <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} style={{
+              padding: "11px 12px", borderRadius: 12, flexShrink: 0,
+              border: `1px solid ${filterMonth ? "rgba(0,229,195,.3)" : G.border}`,
+              background: filterMonth ? "rgba(0,229,195,.08)" : G.glass,
+              backdropFilter: G.blur, color: filterMonth ? G.accent : "rgba(255,255,255,.55)",
+              fontSize: 13, outline: "none", fontFamily: "inherit",
+              colorScheme: "dark", cursor: "pointer",
+            }}>
+              <option value="">Mese</option>
+              {["01","02","03","04","05","06","07","08","09","10","11","12"].map((m, i) => (
+                <option key={m} value={m}>{["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"][i]}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Filtri */}

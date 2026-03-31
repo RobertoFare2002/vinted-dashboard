@@ -43,13 +43,8 @@ export default async function SalesPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Vendite</h1>
-          <p style={{ color: "rgba(255,255,255,.45)", fontSize: 13, margin: 0 }}>
-            {sales.length} vendite totali · gestisci dal sito
-          </p>
-        </div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Vendite</h1>
       </div>
 
       <SalesClient
