@@ -91,6 +91,7 @@ interface Props {
     avgMargin: number; totalPending: number; totalSales: number;
     closedSales: number; pendingSales: number; staleItems: number; stockCount: number; stockCost: number;
     allRevenue: number; allPending: number; allCost: number;
+    allClosedSales: number; allPendingSales: number;
     potentialStockValue: number;
     ytdProfit: number; ytdMargin: number; ytdRevenue: number; ytdCost: number; ytdPending: number;
     ytdClosedSales: number; ytdOpenSales: number; ytdStockCount: number; currentYear: number;
