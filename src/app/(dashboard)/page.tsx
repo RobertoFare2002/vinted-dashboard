@@ -21,12 +21,12 @@ export default async function DashboardPage({
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  if (!user) return null;
+
   const [{ data: salesData }, { data: stockData }, { data: profilesData }, { data: templatesData }] = await Promise.all([
     supabase.from("sales_log").select("*").order("transaction_date", { ascending: false }),
     supabase.from("stock_log").select("*").order("purchased_at", { ascending: false }),
-    if (!user) return; // oppure redirect, o return null nel componente
-
-supabase.from("profiles").select("id,name,avatar_url").eq("user_id", user.id),
+    supabase.from("profiles").select("id,name,avatar_url").eq("user_id", user.id),
     supabase.from("templates").select("id,name,photo_urls,price"),
   ]);
 
