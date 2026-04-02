@@ -22,27 +22,27 @@ type Props = {
 const S = {
   overlay: {
     position: "fixed" as const, inset: 0, zIndex: 100,
-    background: "rgba(0,0,0,.8)", backdropFilter: "blur(6px)",
+    background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)",
     display: "flex", alignItems: "flex-end", justifyContent: "center",
-    padding: "0 0 0 0",
   },
   sheet: {
-    background: "#0f1520",
-    border: "1px solid rgba(255,255,255,.1)",
+    background: "#ffffff",
+    border: "none",
     borderRadius: "20px 20px 0 0",
     padding: "20px 18px 32px",
     width: "100%", maxWidth: 560,
     maxHeight: "90vh", overflowY: "auto" as const,
+    boxShadow: "0 -8px 40px rgba(0,0,0,.12)",
   },
   label: {
-    display: "block", fontSize: 11, color: "rgba(255,255,255,.4)",
-    marginBottom: 5, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".04em",
+    display: "block", fontSize: 11, color: "#888888",
+    marginBottom: 5, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".05em",
   },
   input: {
-    width: "100%", padding: "11px 13px", borderRadius: 11,
-    border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.05)",
-    color: "rgba(255,255,255,.9)", fontSize: 14, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box" as const, colorScheme: "dark" as const,
+    width: "100%", padding: "10px 13px", borderRadius: 12,
+    border: "1px solid #EBEBEB", background: "#F5F5F5",
+    color: "#111111", fontSize: 13, fontFamily: "inherit",
+    outline: "none", boxSizing: "border-box" as const,
   },
   field: { marginBottom: 14 },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 14px" },
@@ -67,7 +67,6 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
   const notesRef  = useRef<HTMLTextAreaElement>(null);
   const statusRef = useRef<HTMLSelectElement>(null);
 
-  // Risolve profile_id che potrebbe essere UUID o nome legacy
   const resolvedProfileId = useMemo(() => {
     if (!item.profile_id) return "";
     if (profiles.some(p => p.id === item.profile_id)) return item.profile_id;
@@ -110,28 +109,26 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
       <div style={S.sheet} onClick={e => e.stopPropagation()}>
 
         {/* Handle bar */}
-        <div style={{ width: 36, height: 4, background: "rgba(255,255,255,.15)", borderRadius: 2, margin: "0 auto 18px" }} />
+        <div style={{ width: 36, height: 4, background: "#EBEBEB", borderRadius: 2, margin: "0 auto 18px" }} />
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           {thumb && (
-            <div style={{ width: 44, height: 44, borderRadius: 9, overflow: "hidden", flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: "1px solid #EBEBEB" }}>
               <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           )}
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>Modifica articolo</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Magazzino</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#111111" }}>Modifica articolo</div>
+            <div style={{ fontSize: 11, color: "#888888" }}>Magazzino</div>
           </div>
         </div>
 
-        {/* Nome */}
         <div style={S.field}>
           <label style={S.label}>Nome articolo *</label>
           <input ref={nameRef} style={S.input} defaultValue={item.name ?? ""} placeholder="Nome articolo" />
         </div>
 
-        {/* Taglia / Qtà */}
         <div style={{ ...S.grid2, marginBottom: 14 }}>
           <div>
             <label style={S.label}>Taglia</label>
@@ -143,7 +140,6 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
           </div>
         </div>
 
-        {/* Prezzo / Data */}
         <div style={{ ...S.grid2, marginBottom: 14 }}>
           <div>
             <label style={S.label}>Prezzo acquisto €</label>
@@ -155,7 +151,6 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
           </div>
         </div>
 
-        {/* Stato */}
         <div style={S.field}>
           <label style={S.label}>Stato</label>
           <select ref={statusRef} style={{ ...S.input, appearance: "none" as const }} defaultValue={item.status ?? "available"}>
@@ -165,9 +160,8 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
           </select>
         </div>
 
-        {/* Nome utente */}
         <div style={S.field}>
-          <label style={S.label}>Nome utente</label>
+          <label style={S.label}>Profilo</label>
           <select value={selectedProfile} onChange={e => setSelectedProfile(e.target.value)} style={{ ...S.input, appearance: "none" as const }}>
             <option value="">— Nessun profilo —</option>
             {profiles.map(p => (
@@ -176,7 +170,6 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
           </select>
         </div>
 
-        {/* Note */}
         <div style={S.field}>
           <label style={S.label}>Note</label>
           <textarea ref={notesRef} style={{ ...S.input, minHeight: 70, resize: "vertical" }}
@@ -185,23 +178,23 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
         </div>
 
         {error && (
-          <div style={{ marginBottom: 14, fontSize: 12, color: "#ff4d6d", padding: "8px 12px", background: "rgba(255,77,109,.08)", borderRadius: 8 }}>
-            ❌ {error}
+          <div style={{ marginBottom: 14, fontSize: 12, color: "#FF4D4D", padding: "9px 12px", background: "rgba(255,77,77,.07)", borderRadius: 10 }}>
+            ⚠ {error}
           </div>
         )}
 
-        {/* Bottoni */}
         <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
           <button onClick={onClose} disabled={isPending} style={{
-            flex: 1, padding: "13px", borderRadius: 12,
-            border: "1px solid rgba(255,255,255,.1)", background: "transparent",
-            color: "rgba(255,255,255,.55)", cursor: "pointer", fontSize: 14, fontWeight: 600,
+            flex: 1, padding: "13px", borderRadius: 999,
+            border: "1px solid #EBEBEB", background: "#ffffff",
+            color: "#888888", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            fontFamily: "inherit",
           }}>Annulla</button>
           <button onClick={handleSave} disabled={isPending} style={{
-            flex: 2, padding: "13px", borderRadius: 12,
-            border: "1px solid rgba(22,194,163,.4)",
-            background: "rgba(22,194,163,.12)", color: "#16c2a3",
-            cursor: isPending ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 700,
+            flex: 2, padding: "13px", borderRadius: 999,
+            border: "none", background: "#007782", color: "#ffffff",
+            cursor: isPending ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700,
+            fontFamily: "inherit", opacity: isPending ? .7 : 1,
           }}>
             {isPending ? "Salvataggio…" : "Salva modifiche"}
           </button>

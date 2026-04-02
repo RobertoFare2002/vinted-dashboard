@@ -139,9 +139,9 @@ export default async function StockPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Magazzino</h1>
-        <p style={{ color: "rgba(255,255,255,.45)", fontSize: 13, margin: 0 }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "#111111", letterSpacing: "-.03em" }}>Magazzino</h1>
+        <p style={{ color: "#888888", fontSize: 13, margin: 0 }}>
           {available} disponibili · {reserved} in sospeso · {sold} venduti · {items.length} totali
         </p>
       </div>

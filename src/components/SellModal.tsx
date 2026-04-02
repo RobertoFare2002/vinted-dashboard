@@ -22,23 +22,24 @@ type Props = {
 const S = {
   overlay: {
     position: "fixed" as const, inset: 0, zIndex: 100,
-    background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)",
+    background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)",
     display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
   },
   modal: {
-    background: "#121216", border: "1px solid rgba(255,255,255,.12)",
+    background: "#ffffff", border: "none",
     borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 440,
-    boxShadow: "0 32px 80px rgba(0,0,0,.6)",
+    boxShadow: "0 24px 60px rgba(0,0,0,.16)",
   },
   label: {
-    display: "block", fontSize: 11, color: "rgba(255,255,255,.45)",
-    marginBottom: 5, fontWeight: 500, textTransform: "uppercase" as const, letterSpacing: ".04em",
+    display: "block", fontSize: 11, color: "#888888",
+    marginBottom: 5, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".05em",
   },
   input: {
-    width: "100%", padding: "9px 12px", borderRadius: 10,
-    border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.06)",
-    color: "rgba(255,255,255,.92)", fontSize: 14, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box" as const, colorScheme: "dark" as const,
+    width: "100%", padding: "10px 13px", borderRadius: 12,
+    border: "1px solid #EBEBEB", background: "#F5F5F5",
+    color: "#111111", fontSize: 13, fontFamily: "inherit",
+    outline: "none", boxSizing: "border-box" as const,
+    transition: "border-color .15s",
   },
 };
 
@@ -84,29 +85,25 @@ export default function SellModal({ item, thumb, onClose }: Props) {
     });
   }
 
-  const margin = cost > 0 && priceRef.current?.value
-    ? Math.round(((parseFloat(priceRef.current.value) - cost) / cost) * 100)
-    : null;
-
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={S.modal} onClick={e => e.stopPropagation()}>
 
-        {/* Header con preview articolo */}
+        {/* Header */}
         <div style={{ display: "flex", gap: 14, marginBottom: 24, alignItems: "center" }}>
           <div style={{
             width: 60, height: 60, borderRadius: 12, flexShrink: 0,
-            background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.10)",
+            background: "#F5F5F5", border: "1px solid #EBEBEB",
             overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             {thumb
               ? <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <span style={{ fontSize: 24, opacity: .3 }}>📷</span>
+              : <span style={{ fontSize: 24, opacity: .4 }}>📷</span>
             }
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{name}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#111111", marginBottom: 3 }}>{name}</div>
+            <div style={{ fontSize: 12, color: "#888888" }}>
               {hasSize ? `Taglia ${item.size}` : ""}
               {hasSize && cost > 0 ? " · " : ""}
               {cost > 0 ? `Costo acq. €${cost.toFixed(2)}` : ""}
@@ -114,27 +111,23 @@ export default function SellModal({ item, thumb, onClose }: Props) {
           </div>
         </div>
 
-        {/* Prezzo vendita — campo principale */}
+        {/* Prezzo */}
         <div style={{ marginBottom: 16 }}>
           <label style={S.label}>Prezzo vendita € *</label>
           <input
             ref={priceRef}
-            style={{ ...S.input, fontSize: 20, fontWeight: 700, color: "#16c2a3" }}
+            style={{ ...S.input, fontSize: 20, fontWeight: 700, color: "#111111" }}
             type="number" step="0.01" min="0"
             placeholder="0.00"
             autoFocus
           />
-          {/* Margine live — aggiornato al blur per semplicità */}
           {cost > 0 && (
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 4 }}>
-              Costo acquisto: €{cost.toFixed(2)}
-              {" · "}
-              <span style={{ color: "rgba(255,255,255,.5)" }}>il margine viene calcolato automaticamente</span>
+            <div style={{ fontSize: 11, color: "#888888", marginTop: 5 }}>
+              Costo acquisto: €{cost.toFixed(2)} · il margine viene calcolato automaticamente
             </div>
           )}
         </div>
 
-        {/* Riga: acquirente + data */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", marginBottom: 16 }}>
           <div>
             <label style={S.label}>Acquirente</label>
@@ -146,7 +139,6 @@ export default function SellModal({ item, thumb, onClose }: Props) {
           </div>
         </div>
 
-        {/* Piattaforma */}
         <div style={{ marginBottom: 16 }}>
           <label style={S.label}>Piattaforma</label>
           <select ref={platformRef} style={S.input} defaultValue="vinted">
@@ -157,7 +149,6 @@ export default function SellModal({ item, thumb, onClose }: Props) {
           </select>
         </div>
 
-        {/* Note */}
         <div style={{ marginBottom: 20 }}>
           <label style={S.label}>Note (opzionale)</label>
           <textarea
@@ -168,25 +159,26 @@ export default function SellModal({ item, thumb, onClose }: Props) {
         </div>
 
         {error && (
-          <div style={{ marginBottom: 16, fontSize: 12, color: "#ff4d6d" }}>❌ {error}</div>
+          <div style={{ marginBottom: 16, fontSize: 12, color: "#FF4D4D", background: "rgba(255,77,77,.07)", padding: "9px 12px", borderRadius: 10 }}>⚠ {error}</div>
         )}
 
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} disabled={isPending} style={{
-            flex: 1, padding: "10px", borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.10)", background: "transparent",
-            color: "rgba(255,255,255,.55)", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            flex: 1, padding: "11px", borderRadius: 999,
+            border: "1px solid #EBEBEB", background: "#ffffff",
+            color: "#888888", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            fontFamily: "inherit",
           }}>
             Annulla
           </button>
           <button onClick={handleSell} disabled={isPending} style={{
-            flex: 2, padding: "10px", borderRadius: 10,
-            border: "1px solid rgba(22,194,163,.5)",
-            background: "rgba(22,194,163,.15)", color: "#16c2a3",
+            flex: 2, padding: "11px", borderRadius: 999,
+            border: "none", background: "#007782", color: "#ffffff",
             cursor: isPending ? "not-allowed" : "pointer",
-            fontSize: 13, fontWeight: 700,
+            fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+            opacity: isPending ? .7 : 1,
           }}>
-            {isPending ? "Registrazione…" : "✅ Registra vendita"}
+            {isPending ? "Registrazione…" : "✓ Registra vendita"}
           </button>
         </div>
 
