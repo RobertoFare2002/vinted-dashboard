@@ -91,7 +91,7 @@ export default function SignupPage() {
             </span>
             <div style={{ marginTop: 16 }}>
               <Link href="/login" style={{
-                color: "#111111", fontSize: 13, fontWeight: 700,
+                fontSize: 13, fontWeight: 700,
                 padding: "9px 20px", borderRadius: 999,
                 background: "#007782", color: "#ffffff", display: "inline-block",
                 textDecoration: "none",
