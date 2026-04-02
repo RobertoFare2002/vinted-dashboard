@@ -2,54 +2,62 @@
 // src/components/RecentTransactions.tsx
 import type { Transaction } from "@/lib/types";
 
-const TYPE_LABEL: Record<string, { label: string; color: string }> = {
-  sale:     { label: "Vendita",  color: "var(--accent)" },
-  purchase: { label: "Acquisto", color: "var(--danger)"  },
-  return:   { label: "Reso",     color: "#f59e0b"        },
-  expense:  { label: "Spesa",    color: "#c084fc"        },
+const TYPE_META: Record<string, { label: string; dot: string }> = {
+  sale:     { label: "Vendita",  dot: "#A8E63D" },
+  purchase: { label: "Acquisto", dot: "#FF4D4D"  },
+  return:   { label: "Reso",     dot: "#F5A623"  },
+  expense:  { label: "Spesa",    dot: "#888888"  },
 };
 
 export default function RecentTransactions({ transactions }: { transactions: Transaction[] }) {
   return (
     <div style={{
-      background: "rgba(18,18,22,.9)", border: "1px solid var(--border)",
-      borderRadius: 14, padding: "20px"
+      background: "#ffffff",
+      borderRadius: 20,
+      padding: "24px",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
     }}>
-      <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Ultime transazioni</h2>
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: "#111111", letterSpacing: "-.02em", marginBottom: 18 }}>
+        Ultime transazioni
+      </h2>
       {transactions.length === 0 ? (
-        <p style={{ color: "var(--muted)", fontSize: 13 }}>Nessuna transazione ancora.</p>
+        <p style={{ color: "#888", fontSize: 13 }}>Nessuna transazione ancora.</p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           {transactions.map(tx => {
-            const meta = TYPE_LABEL[tx.type] ?? { label: tx.type, color: "var(--muted)" };
+            const meta = TYPE_META[tx.type] ?? { label: tx.type, dot: "#888" };
             const sign = tx.type === "sale" ? "+" : "-";
+            const isPos = tx.type === "sale";
             return (
               <div key={tx.id} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "10px 12px", borderRadius: 10,
-                background: "rgba(255,255,255,.03)",
-                border: "1px solid rgba(255,255,255,.05)"
+                padding: "13px 0",
+                borderBottom: "1px solid #EBEBEB",
               }}>
-                <div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, color: meta.color,
-                      background: meta.color + "20",
-                      padding: "2px 7px", borderRadius: 6
-                    }}>{meta.label}</span>
-                    <span style={{ fontSize: 12, color: "var(--muted)" }}>{tx.platform}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10,
+                    background: "#F5F5F5",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: meta.dot, display: "block" }} />
                   </div>
-                  {tx.buyer_seller && (
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>
-                      {tx.buyer_seller}
+                  <div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{meta.label}</span>
+                      {tx.platform && <span style={{ fontSize: 11, color: "#888" }}>{tx.platform}</span>}
                     </div>
-                  )}
+                    {tx.buyer_seller && (
+                      <div style={{ fontSize: 11, color: "#888", marginTop: 1 }}>{tx.buyer_seller}</div>
+                    )}
+                  </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: meta.color }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: isPos ? "#111" : "#FF4D4D" }}>
                     {sign}€{Number(tx.amount).toFixed(2)}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: "#888", marginTop: 1 }}>
                     {new Date(tx.transaction_date).toLocaleDateString("it")}
                   </div>
                 </div>

@@ -4,8 +4,7 @@ import { useState, useMemo, useTransition } from "react";
 import { deleteStockItem } from "@/app/(dashboard)/stock/actions";
 import SellModal from "@/components/SellModal";
 import dynamic from "next/dynamic";
-const StockEditModal  = dynamic(() => import("./StockEditModal"),  { ssr: false });
-const BulkSellModal   = dynamic(() => import("./BulkSellModal"),   { ssr: false });
+const StockEditModal = dynamic(() => import("./StockEditModal"), { ssr: false });
 
 type StockItem = {
   id: string; name: string|null; size: string|null; quantity: number|null;
@@ -13,37 +12,28 @@ type StockItem = {
   profile_id: string|null; external_id: string|null; location: string|null;
   template_id_ext: string|null;
 };
-type Props = {
-  initialItems: StockItem[];
-  photoMap:     Record<string, string>;
-  profileMap:   Record<string, string>;
-  profiles:     { id: string; name: string }[];
+type Profile = { id: string; name: string };
+type Props = { initialItems: StockItem[]; photoMap: Record<string, string>; profileMap: Record<string, string>; profiles: Profile[] };
+
+const G   = "#007782";
+const GBG = "#f0fad0";
+const RED = "#FF4D4D";
+const AMB = "#F5A623";
+const INK = "#111111";
+const SL  = "#888888";
+const BD  = "#EBEBEB";
+const LT  = "#F5F5F5";
+const W   = "#ffffff";
+
+const STATUS_META: Record<string, { label: string; dot: string; color: string; bg: string }> = {
+  available: { label: "Disponibile", dot: "#6bb800", color: "#6bb800", bg: GBG },
+  reserved:  { label: "In sospeso",  dot: AMB,       color: AMB,       bg: "#fef3c7" },
+  sold:      { label: "Venduto",     dot: SL,        color: SL,        bg: LT },
+  archived:  { label: "Archiviato",  dot: SL,        color: SL,        bg: LT },
 };
 
-const G = {
-  glass:  "rgba(255,255,255,.045)",
-  border: "rgba(255,255,255,.08)",
-  blur:   "blur(20px)",
-  accent: "#00e5c3",
-  danger: "#ff4d6d",
-  amber:  "#f59e0b",
-  blue:   "#4f8ef7",
-};
-
-const STATUS_META = {
-  available: { label: "Disponibile", color: G.accent },
-  reserved:  { label: "In sospeso",  color: G.amber  },
-  sold:      { label: "Venduto",     color: "rgba(255,255,255,.3)" },
-  archived:  { label: "Archiviato",  color: "rgba(255,255,255,.2)" },
-};
-
-function fmt(n: number) {
-  return n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function daysSince(d: string | null) {
-  if (!d) return 0;
-  return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-}
+function fmt(n: number) { return n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function daysSince(d: string | null) { if (!d) return 0; return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
 
 export default function StockClient({ initialItems, photoMap, profileMap, profiles }: Props) {
   const [filterStatus, setFilterStatus] = useState("available");
@@ -53,29 +43,9 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [isPending, startTransition]    = useTransition();
   const [actionId, setActionId]         = useState<string | null>(null);
-  const [filterProfile, setFilterProfile] = useState("");
-  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
-  const [bulkTarget, setBulkTarget]       = useState<StockItem[] | null>(null);
-
-  function toggleSelect(id: string) {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-  function clearSelection() { setSelectedIds(new Set()); }
-
-  const profileFiltered = useMemo(() => {
-    if (!filterProfile) return initialItems;
-    const profileName = profiles.find(p => p.id === filterProfile)?.name ?? "";
-    return initialItems.filter(i =>
-      i.profile_id === filterProfile || i.profile_id === profileName
-    );
-  }, [initialItems, filterProfile, profiles]);
 
   const items = useMemo(() => {
-    let list = profileFiltered;
+    let list = initialItems;
     if (filterStatus !== "all") list = list.filter(i => i.status === filterStatus);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -85,145 +55,72 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
       );
     }
     return list;
-  }, [profileFiltered, filterStatus, search, profileMap]);
+  }, [initialItems, filterStatus, search, profileMap]);
 
-  const available = profileFiltered.filter(i => i.status === "available");
-  const reserved  = profileFiltered.filter(i => i.status === "reserved");
+  const available = initialItems.filter(i => i.status === "available");
+  const reserved  = initialItems.filter(i => i.status === "reserved");
   const totalCost = available.reduce((s, i) => s + Number(i.purchase_price ?? 0) * Number(i.quantity ?? 1), 0);
   const stale     = available.filter(i => daysSince(i.purchased_at) > 60).length;
 
-  function handleDelete(id: string) {
-    setConfirmDelete(null); setActionId(id);
-    startTransition(async () => { await deleteStockItem(id); setActionId(null); });
-  }
-
-  const overlayStyle: React.CSSProperties = {
-    position: "fixed", inset: 0, zIndex: 90,
-    background: "rgba(0,0,0,.75)", backdropFilter: "blur(8px)",
-    display: "flex", alignItems: "flex-end",
-  };
-  const sheetStyle: React.CSSProperties = {
-    background: "rgba(8,10,20,.95)", border: "1px solid rgba(255,77,109,.2)",
-    borderRadius: "20px 20px 0 0", backdropFilter: "blur(40px)",
-    padding: "20px 18px 32px", width: "100%", maxWidth: 560, margin: "0 auto",
-  };
+  function handleDelete(id: string) { setConfirmDelete(null); setActionId(id); startTransition(async () => { await deleteStockItem(id); setActionId(null); }); }
 
   return (
     <>
       {sellTarget && <SellModal item={sellTarget} thumb={sellTarget.template_id_ext ? (photoMap[sellTarget.template_id_ext] ?? null) : null} onClose={() => setSellTarget(null)} />}
       {editTarget && <StockEditModal item={editTarget} thumb={editTarget.template_id_ext ? (photoMap[editTarget.template_id_ext] ?? null) : null} onClose={() => setEditTarget(null)} profiles={profiles} />}
-      {bulkTarget && <BulkSellModal items={bulkTarget} photoMap={photoMap} profiles={profiles} onClose={() => { setBulkTarget(null); clearSelection(); }} />}
 
-      {/* Barra flottante selezione */}
-      {selectedIds.size > 0 && (
-        <div style={{
-          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
-          zIndex: 80, display: "flex", alignItems: "center", gap: 10,
-          background: "rgba(10,14,28,.97)", border: "1px solid rgba(0,229,195,.3)",
-          borderRadius: 16, padding: "12px 16px", boxShadow: "0 8px 32px rgba(0,0,0,.6)",
-          backdropFilter: "blur(20px)", minWidth: 280,
-        }}>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,.7)", flex: 1 }}>
-            {selectedIds.size} articol{selectedIds.size === 1 ? "o" : "i"} selezionat{selectedIds.size === 1 ? "o" : "i"}
-          </span>
-          <button onClick={clearSelection} style={{
-            padding: "6px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)",
-            background: "transparent", color: "rgba(255,255,255,.45)", cursor: "pointer", fontSize: 12, fontFamily: "inherit",
-          }}>✕</button>
-          {selectedIds.size >= 2 && (
-            <button onClick={() => {
-              const selected = items.filter(i => selectedIds.has(i.id) && i.status === "available");
-              if (selected.length < 2) return;
-              setBulkTarget(selected);
-            }} style={{
-              padding: "8px 16px", borderRadius: 10,
-              border: "1px solid rgba(0,229,195,.4)", background: "rgba(0,229,195,.12)",
-              color: "#00e5c3", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
-              whiteSpace: "nowrap",
-            }}>🛒 Vendi blocco</button>
-          )}
-        </div>
-      )}
-
+      {/* Confirm Delete */}
       {confirmDelete && (
-        <div style={overlayStyle} onClick={() => setConfirmDelete(null)}>
-          <div style={sheetStyle} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 36, height: 4, background: "rgba(255,255,255,.15)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>Elimina articolo?</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,.45)", marginBottom: 24 }}>L&apos;articolo verrà rimosso dal magazzino.</div>
+        <div style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setConfirmDelete(null)}>
+          <div style={{ background: W, border: "none", borderRadius: 20, padding: "24px 20px", maxWidth: 400, width: "100%", boxShadow: "0 24px 60px rgba(0,0,0,.14)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: INK }}>Elimina articolo?</div>
+            <div style={{ fontSize: 13, color: SL, marginBottom: 20 }}>L&apos;articolo verrà rimosso dal magazzino.</div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: "13px", borderRadius: 12, border: `1px solid ${G.border}`, background: G.glass, color: "rgba(255,255,255,.6)", cursor: "pointer", fontSize: 14 }}>Annulla</button>
-              <button onClick={() => handleDelete(confirmDelete)} style={{ flex: 1, padding: "13px", borderRadius: 12, border: "1px solid rgba(255,77,109,.3)", background: "rgba(255,77,109,.1)", color: G.danger, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>Elimina</button>
+              <button onClick={() => setConfirmDelete(null)} className="btn btn-outline" style={{ flex: 1 }}>Annulla</button>
+              <button onClick={() => handleDelete(confirmDelete)} style={{ flex: 1, padding: "10px 18px", borderRadius: 999, border: `1px solid ${RED}30`, background: `${RED}08`, color: RED, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Elimina</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* KPI */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
         {[
-          { label: "Disponibili", value: String(available.reduce((s, i) => s + Number(i.quantity ?? 1), 0)), color: G.accent, glow: "rgba(0,229,195,.2)" },
-          { label: "In sospeso",  value: String(reserved.length), color: G.amber, glow: "rgba(245,158,11,.2)" },
-          { label: "Costo tot.",  value: `€${fmt(totalCost)}`, color: G.danger, glow: "rgba(255,77,109,.2)" },
-          { label: ">60gg",       value: String(stale), color: G.amber, glow: "rgba(245,158,11,.2)" },
+          { label: "Disponibili", value: String(available.reduce((s, i) => s + Number(i.quantity ?? 1), 0)), color: "#6bb800" },
+          { label: "In sospeso",  value: String(reserved.length),   color: AMB },
+          { label: "Costo tot.",  value: `€${fmt(totalCost)}`,      color: RED },
+          { label: ">60gg",       value: String(stale),             color: stale > 0 ? AMB : SL },
         ].map(k => (
-          <div key={k.label} style={{
-            background: G.glass, border: `1px solid ${G.border}`,
-            borderBottom: `2px solid ${k.color}`,
-            backdropFilter: G.blur, borderRadius: 12,
-            padding: "12px 10px", position: "relative", overflow: "hidden",
-          }}>
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 40, background: `linear-gradient(to top, ${k.glow}, transparent)`, pointerEvents: "none" }} />
-            <div style={{ fontSize: 9, color: "rgba(255,255,255,.4)", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 700, marginBottom: 5 }}>{k.label}</div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: k.color, letterSpacing: "-.02em", wordBreak: "break-all" }}>{k.value}</div>
+          <div key={k.label} className="card" style={{ padding: "16px 14px" }}>
+            <div style={{ fontSize: 10, color: SL, textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600, marginBottom: 6 }}>{k.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: k.color, letterSpacing: "-.02em", fontVariantNumeric: "tabular-nums" }}>{k.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Filtri */}
-      <div style={{ display: "flex", gap: 3, marginBottom: 10, background: "rgba(255,255,255,.03)", borderRadius: 12, padding: 3 }}>
+      {/* Filtri tab */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
         {([["available", "Disponibili"], ["reserved", "Sospeso"], ["sold", "Venduti"], ["all", "Tutti"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setFilterStatus(k)} style={{
-            flex: 1, padding: "8px 2px", borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: "pointer",
-            border: filterStatus === k ? `1px solid rgba(0,229,195,.25)` : "1px solid transparent",
-            background: filterStatus === k ? "rgba(0,229,195,.10)" : "transparent",
-            backdropFilter: filterStatus === k ? G.blur : "none",
-            color: filterStatus === k ? G.accent : "rgba(255,255,255,.4)",
+            padding: "7px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            border: "none", fontFamily: "inherit",
+            background: filterStatus === k ? INK : LT,
+            color: filterStatus === k ? W : SL,
             transition: "all .15s",
           }}>{l}</button>
         ))}
       </div>
 
-      {/* Cerca */}
-      <div style={{ position: "relative", marginBottom: 8 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca articolo..."
-          style={{
-            width: "100%", padding: "11px 14px", borderRadius: 12,
-            border: `1px solid ${G.border}`, background: G.glass,
-            backdropFilter: G.blur, color: "rgba(255,255,255,.85)",
-            fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
-          }} />
-        <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "rgba(255,255,255,.2)" }}>{items.length}/{initialItems.length}</span>
+      {/* Search */}
+      <div style={{ position: "relative", marginBottom: 14 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca articolo, profilo..."
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "none", background: W, color: INK, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }} />
+        <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: SL }}>{items.length}/{initialItems.length}</span>
       </div>
 
-      {/* Filtro profilo — riga dedicata full-width */}
-      <div style={{ marginBottom: 14 }}>
-        <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)} style={{
-          width: "100%", padding: "11px 14px", borderRadius: 12, boxSizing: "border-box" as const,
-          border: filterProfile ? `1px solid rgba(0,229,195,.3)` : `1px solid ${G.border}`,
-          background: filterProfile ? "rgba(0,229,195,.08)" : G.glass,
-          backdropFilter: G.blur, color: filterProfile ? G.accent : "rgba(255,255,255,.55)",
-          fontSize: 13, outline: "none", fontFamily: "inherit",
-          colorScheme: "dark", cursor: "pointer",
-        }}>
-          <option value="">Tutti i profili</option>
-          {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-      </div>
-
-      {/* Lista */}
+      {/* Lista articoli */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {items.length === 0 && <div style={{ textAlign: "center", padding: "48px 0", color: "rgba(255,255,255,.25)", fontSize: 14 }}>Nessun articolo</div>}
+        {items.length === 0 && <div style={{ textAlign: "center", padding: "48px 0", color: SL, fontSize: 14 }}>Nessun articolo</div>}
         {items.map(item => {
           const st    = STATUS_META[item.status as keyof typeof STATUS_META] ?? STATUS_META.available;
           const thumb = item.template_id_ext ? photoMap[item.template_id_ext] : null;
@@ -232,70 +129,53 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
           const busy  = isPending && actionId === item.id;
           const profileName = item.profile_id ? (profileMap[item.profile_id] ?? item.profile_id) : null;
 
-          const isSelected = selectedIds.has(item.id);
-
           return (
-            <div key={item.id} style={{
-              background: isSelected ? "rgba(0,229,195,.06)" : G.glass,
-              border: `1px solid ${isSelected ? "rgba(0,229,195,.35)" : G.border}`,
-              backdropFilter: G.blur, borderRadius: 14,
-              display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-              opacity: busy ? .5 : 1, transition: "all .2s",
-            }}>
-              {/* Checkbox selezione (solo articoli disponibili) */}
-              {item.status === "available" && (
-                <div onClick={() => toggleSelect(item.id)} style={{
-                  width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: "pointer",
-                  border: `2px solid ${isSelected ? G.accent : "rgba(255,255,255,.2)"}`,
-                  background: isSelected ? G.accent : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "all .15s",
-                }}>
-                  {isSelected && <span style={{ fontSize: 11, color: "#000", fontWeight: 900 }}>✓</span>}
-                </div>
-              )}
-              <div style={{ width: 52, height: 52, borderRadius: 11, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,.05)", border: `1px solid ${G.border}` }}>
+            <div key={item.id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", opacity: busy ? .5 : 1, transition: "all .2s" }}>
+              {/* Thumbnail */}
+              <div style={{ width: 50, height: 50, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: LT }}>
                 {thumb
                   ? <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, opacity: .25 }}>📦</div>}
+                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: SL }}>📦</div>}
               </div>
 
+              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>{item.name || "—"}</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4, color: INK }}>{item.name || "—"}</div>
+                <div style={{ fontSize: 11, color: SL, display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 5 }}>
                   {item.size && <span>T. {item.size}</span>}
                   {item.purchased_at && <span>· {new Date(item.purchased_at).toLocaleDateString("it")}</span>}
                   {profileName && <span>· {profileName}</span>}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, color: st.color, fontWeight: 700 }}>{st.label}</span>
-                  {isStale && <span style={{ fontSize: 10, color: G.amber, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(245,158,11,.1)", border: "1px solid rgba(245,158,11,.2)" }}>⚠ {days}gg</span>}
+                {/* Status dot badge */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: st.color }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.dot, display: "inline-block" }} />
+                    {st.label}
+                  </span>
+                  {isStale && <span style={{ fontSize: 10, color: AMB, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>⚠ {days}gg</span>}
                 </div>
               </div>
 
+              {/* Price + Actions */}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.02em" }}>€{fmt(Number(item.purchase_price ?? 0))}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-.02em", color: INK, fontVariantNumeric: "tabular-nums" }}>€{fmt(Number(item.purchase_price ?? 0))}</div>
                 {item.status === "available" && (
-                  <button onClick={() => setSellTarget(item)} style={{
-                    padding: "6px 14px", borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                    border: `1px solid rgba(0,229,195,.3)`, background: "rgba(0,229,195,.10)",
-                    backdropFilter: G.blur, color: G.accent, whiteSpace: "nowrap",
-                    boxShadow: "0 0 12px rgba(0,229,195,.08)",
-                  }}>Vendi</button>
+                  <button onClick={() => setSellTarget(item)} style={{ background: "#007782", color: "#ffffff", padding: "6px 16px", fontSize: 12, fontWeight: 700, borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Vendi</button>
                 )}
                 {item.status === "reserved" && (
-                  <span style={{ fontSize: 11, color: G.amber, fontWeight: 700, padding: "5px 10px", borderRadius: 8, background: "rgba(245,158,11,.1)", border: "1px solid rgba(245,158,11,.2)" }}>Sospeso</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4, color: AMB }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: AMB, display: "inline-block" }} /> Sospeso
+                  </span>
                 )}
                 <div style={{ display: "flex", gap: 5 }}>
-                  <button onClick={() => setEditTarget(item)} style={{ padding: "5px 9px", borderRadius: 8, border: `1px solid ${G.border}`, background: G.glass, backdropFilter: G.blur, color: "rgba(255,255,255,.6)", cursor: "pointer", fontSize: 13 }}>✏️</button>
-                  <button onClick={() => setConfirmDelete(item.id)} style={{ padding: "5px 9px", borderRadius: 8, border: "1px solid rgba(255,77,109,.2)", background: "transparent", color: G.danger, cursor: "pointer", fontSize: 13 }}>🗑</button>
+                  <button onClick={() => setEditTarget(item)} className="btn btn-outline" style={{ padding: "5px 10px", fontSize: 13 }}>✏️</button>
+                  <button onClick={() => setConfirmDelete(item.id)} style={{ padding: "5px 10px", borderRadius: 12, border: `1px solid ${RED}20`, background: `${RED}05`, color: RED, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>🗑</button>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
-      <div style={{ height: 24 }} />
     </>
   );
 }

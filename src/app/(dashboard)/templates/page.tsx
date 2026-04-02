@@ -16,9 +16,9 @@ export default async function TemplatesPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Template Vinted</h1>
-        <p style={{ color: "rgba(255,255,255,.55)", fontSize: 14, margin: 0 }}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6, color: "#111111", letterSpacing: "-.03em" }}>Template Vinted</h1>
+        <p style={{ color: "#888888", fontSize: 14, margin: 0 }}>
           {templates.length} template · modifica dal sito o dall&apos;estensione
         </p>
       </div>

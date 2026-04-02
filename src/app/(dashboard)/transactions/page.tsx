@@ -2,11 +2,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Transaction } from "@/lib/types";
 
-const TYPE_META: Record<string, { label: string; color: string; sign: string }> = {
-  sale:     { label: "Vendita",  color: "#16c2a3", sign: "+" },
-  purchase: { label: "Acquisto", color: "#ff4d6d", sign: "-" },
-  return:   { label: "Reso",     color: "#c084fc", sign: "±" },
-  expense:  { label: "Spesa",    color: "#f59e0b", sign: "-" },
+const TYPE_META: Record<string, { label: string; color: string; dot: string; sign: string }> = {
+  sale:     { label: "Vendita",  color: "#6bb800", dot: "#A8E63D", sign: "+" },
+  purchase: { label: "Acquisto", color: "#FF4D4D", dot: "#FF4D4D", sign: "-" },
+  return:   { label: "Reso",     color: "#F5A623", dot: "#F5A623", sign: "±" },
+  expense:  { label: "Spesa",    color: "#888888", dot: "#888888", sign: "-" },
 };
 
 export default async function TransactionsPage() {
@@ -30,46 +30,57 @@ export default async function TransactionsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Transazioni</h1>
-      <p style={{ color: "rgba(255,255,255,.55)", fontSize: 14, marginBottom: 24 }}>
-        Acquisti, vendite e spese registrate
-      </p>
+      {/* Page header */}
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "#111111", letterSpacing: "-.03em" }}>
+          Transazioni
+        </h1>
+        <p style={{ color: "#888888", fontSize: 14, margin: 0 }}>
+          Acquisti, vendite e spese registrate
+        </p>
+      </div>
 
-      {/* Sommario */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+      {/* KPI cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
-          { label: "Totale ricavi",  value: `€ ${totalRevenue.toFixed(2)}`, color: "#16c2a3" },
-          { label: "Totale costi",   value: `€ ${totalCost.toFixed(2)}`,    color: "#ff4d6d" },
-          { label: "Profitto netto", value: `€ ${profit.toFixed(2)}`,       color: profit >= 0 ? "#16c2a3" : "#ff4d6d" },
+          { label: "Totale ricavi",  value: `€ ${totalRevenue.toFixed(2)}`, color: "#6bb800" },
+          { label: "Totale costi",   value: `€ ${totalCost.toFixed(2)}`,    color: "#FF4D4D" },
+          { label: "Profitto netto", value: `€ ${profit.toFixed(2)}`,       color: profit >= 0 ? "#6bb800" : "#FF4D4D" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{
-            background: "rgba(18,18,22,.9)",
-            border: "1px solid rgba(255,255,255,.10)",
-            borderRadius: 14, padding: "18px 20px"
+            background: "#ffffff",
+            border: "none",
+            borderRadius: 20,
+            padding: "20px 22px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
           }}>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", marginBottom: 8 }}>{label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
+            <div style={{
+              fontSize: 11, fontWeight: 600, color: "#888888",
+              textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10,
+            }}>{label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color, letterSpacing: "-.03em", fontVariantNumeric: "tabular-nums" }}>{value}</div>
           </div>
         ))}
       </div>
 
-      {/* Tabella */}
+      {/* Table card */}
       <div style={{
-        background: "rgba(18,18,22,.9)",
-        border: "1px solid rgba(255,255,255,.10)",
-        borderRadius: 14, overflow: "hidden"
+        background: "#ffffff",
+        border: "none",
+        borderRadius: 20,
+        overflow: "hidden",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
       }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
-              <tr style={{
-                borderBottom: "1px solid rgba(255,255,255,.10)",
-                background: "rgba(255,255,255,.03)"
-              }}>
-                {["Data","Tipo","Importo","Piattaforma","Acquirente / Venditore","Note"].map(h => (
+              <tr style={{ borderBottom: "1px solid #EBEBEB" }}>
+                {["Data", "Tipo", "Importo", "Piattaforma", "Acquirente / Venditore", "Note"].map(h => (
                   <th key={h} style={{
                     padding: "12px 16px", textAlign: "left",
-                    color: "rgba(255,255,255,.55)", fontWeight: 500, whiteSpace: "nowrap"
+                    color: "#888888", fontSize: 11, fontWeight: 600,
+                    textTransform: "uppercase", letterSpacing: ".05em",
+                    whiteSpace: "nowrap",
                   }}>
                     {h}
                   </th>
@@ -80,43 +91,44 @@ export default async function TransactionsPage() {
               {transactions.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{
-                    padding: "48px 16px", textAlign: "center",
-                    color: "rgba(255,255,255,.35)"
+                    padding: "56px 16px", textAlign: "center",
+                    color: "#888888", fontSize: 14,
                   }}>
                     Nessuna transazione ancora — registrane dall&apos;estensione!
                   </td>
                 </tr>
               ) : transactions.map((tx, i) => {
-                const meta = TYPE_META[tx.type] ?? { label: tx.type, color: "rgba(255,255,255,.55)", sign: "" };
+                const meta = TYPE_META[tx.type] ?? { label: tx.type, color: "#888888", dot: "#888888", sign: "" };
                 return (
                   <tr key={tx.id} style={{
-                    borderBottom: i < transactions.length - 1
-                      ? "1px solid rgba(255,255,255,.05)"
-                      : "none"
+                    borderBottom: i < transactions.length - 1 ? "1px solid #EBEBEB" : "none",
                   }}>
-                    <td style={{ padding: "12px 16px", color: "rgba(255,255,255,.55)", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "13px 16px", color: "#888888", whiteSpace: "nowrap", fontSize: 12 }}>
                       {new Date(tx.transaction_date).toLocaleDateString("it")}
                     </td>
-                    <td style={{ padding: "12px 16px" }}>
+                    <td style={{ padding: "13px 16px" }}>
+                      {/* Dot + label — no pill background */}
                       <span style={{
-                        fontSize: 11, fontWeight: 600,
-                        color: meta.color,
-                        background: meta.color + "20",
-                        padding: "3px 8px", borderRadius: 6
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        fontSize: 12, fontWeight: 600, color: meta.color,
                       }}>
+                        <span style={{
+                          width: 7, height: 7, borderRadius: "50%",
+                          background: meta.dot, display: "inline-block", flexShrink: 0,
+                        }} />
                         {meta.label}
                       </span>
                     </td>
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: meta.color }}>
+                    <td style={{ padding: "13px 16px", fontWeight: 700, color: meta.color, fontVariantNumeric: "tabular-nums" }}>
                       {meta.sign}€{Number(tx.amount).toFixed(2)}
                     </td>
-                    <td style={{ padding: "12px 16px", color: "rgba(255,255,255,.55)" }}>
+                    <td style={{ padding: "13px 16px", color: "#888888" }}>
                       {tx.platform || "—"}
                     </td>
-                    <td style={{ padding: "12px 16px", color: "rgba(255,255,255,.55)" }}>
+                    <td style={{ padding: "13px 16px", color: "#111111", fontWeight: 500 }}>
                       {tx.buyer_seller || "—"}
                     </td>
-                    <td style={{ padding: "12px 16px", color: "rgba(255,255,255,.55)" }}>
+                    <td style={{ padding: "13px 16px", color: "#888888" }}>
                       {tx.notes || "—"}
                     </td>
                   </tr>

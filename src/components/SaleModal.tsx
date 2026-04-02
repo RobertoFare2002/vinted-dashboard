@@ -4,8 +4,6 @@
 import { useRef, useTransition, useState, useMemo } from "react";
 import { createSale, updateSale } from "@/app/(dashboard)/sales/actions";
 
-// ── Tipi ─────────────────────────────────────────────────────────────────────
-
 type SaleRow = {
   id:               string;
   buyer_seller:     string | null;
@@ -32,46 +30,50 @@ type Props = {
   onClose:     () => void;
 };
 
-// ── Stili condivisi ───────────────────────────────────────────────────────────
-
 const S = {
   overlay: {
     position: "fixed" as const, inset: 0, zIndex: 100,
-    background: "rgba(0,0,0,.72)", backdropFilter: "blur(4px)",
+    background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)",
     display: "flex", alignItems: "center", justifyContent: "center",
     padding: "16px",
   },
   modal: {
-    background: "#121216", border: "1px solid rgba(255,255,255,.12)",
+    background: "#ffffff", border: "none",
     borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 520,
     maxHeight: "90vh", overflowY: "auto" as const,
-    boxShadow: "0 32px 80px rgba(0,0,0,.6)",
+    boxShadow: "0 24px 60px rgba(0,0,0,.14)",
   },
-  title: { fontSize: 17, fontWeight: 700, marginBottom: 20, color: "rgba(255,255,255,.95)" },
+  title: { fontSize: 17, fontWeight: 700, marginBottom: 20, color: "#111111" },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", marginBottom: 12 },
   field: { marginBottom: 12 },
-  label: { display: "block", fontSize: 11, color: "rgba(255,255,255,.45)", marginBottom: 5, fontWeight: 500, textTransform: "uppercase" as const, letterSpacing: ".04em" },
+  label: {
+    display: "block", fontSize: 11, color: "#888888",
+    marginBottom: 5, fontWeight: 600,
+    textTransform: "uppercase" as const, letterSpacing: ".05em",
+  },
   input: {
-    width: "100%", padding: "9px 12px", borderRadius: 10,
-    border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.06)",
-    color: "rgba(255,255,255,.92)", fontSize: 13, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box" as const, colorScheme: "dark" as const,
+    width: "100%", padding: "10px 13px", borderRadius: 12,
+    border: "1px solid #EBEBEB", background: "#F5F5F5",
+    color: "#111111", fontSize: 13, fontFamily: "inherit",
+    outline: "none", boxSizing: "border-box" as const,
   },
   row: { display: "flex", gap: 10, marginTop: 24 },
   btnPrimary: {
-    flex: 1, padding: "10px", borderRadius: 10, border: "1px solid rgba(22,194,163,.5)",
-    background: "rgba(22,194,163,.15)", color: "#16c2a3", fontWeight: 650,
-    fontSize: 13, cursor: "pointer", transition: "background .15s",
+    flex: 2, padding: "11px", borderRadius: 999, border: "none",
+    background: "#007782", color: "#ffffff", fontWeight: 700,
+    fontSize: 13, cursor: "pointer", fontFamily: "inherit",
   },
   btnGhost: {
-    flex: 1, padding: "10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.10)",
-    background: "transparent", color: "rgba(255,255,255,.55)", fontWeight: 600,
-    fontSize: 13, cursor: "pointer",
+    flex: 1, padding: "11px", borderRadius: 999,
+    border: "1px solid #EBEBEB", background: "#ffffff",
+    color: "#888888", fontWeight: 600,
+    fontSize: 13, cursor: "pointer", fontFamily: "inherit",
   },
-  err: { marginTop: 12, fontSize: 12, color: "#ff4d6d" },
+  err: {
+    marginTop: 12, fontSize: 12, color: "#FF4D4D",
+    padding: "9px 12px", background: "rgba(255,77,77,.07)", borderRadius: 10,
+  },
 };
-
-// ── Componente ────────────────────────────────────────────────────────────────
 
 function fmtM(n: number) {
   return n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -83,7 +85,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Refs per i campi
   const buyerRef    = useRef<HTMLInputElement>(null);
   const amountRef   = useRef<HTMLInputElement>(null);
   const costRef     = useRef<HTMLInputElement>(null);
@@ -93,7 +94,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
   const tplRef      = useRef<HTMLSelectElement>(null);
   const notesRef    = useRef<HTMLTextAreaElement>(null);
 
-  // Profilo controllato — risolve UUID o nome legacy
   const resolvedProfileId = useMemo(() => {
     if (!sale?.profile_id) return "";
     if (profiles.some(p => p.id === sale.profile_id)) return sale.profile_id;
@@ -136,17 +136,13 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
     });
   }
 
-  // Stoppa propagazione click sul modal (non chiude overlay)
-  function stopProp(e: React.MouseEvent) { e.stopPropagation(); }
-
   return (
     <div style={S.overlay} onClick={onClose}>
-      <div style={S.modal} onClick={stopProp}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
         <div style={S.title}>
-          {mode === "add" ? "➕ Nuova vendita" : "✏️ Modifica vendita"}
+          {mode === "add" ? "Nuova vendita" : "Modifica vendita"}
         </div>
 
-        {/* Riga 1: Prodotto / Importo */}
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Prodotto / Acquirente *</label>
@@ -158,7 +154,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
           </div>
         </div>
 
-        {/* Riga 2: Costo / Piattaforma */}
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Costo acquisto €</label>
@@ -175,7 +170,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
           </div>
         </div>
 
-        {/* Riga 3: Stato / Data */}
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Stato</label>
@@ -194,7 +188,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
           </div>
         </div>
 
-        {/* Riga 4: Template / Profilo */}
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Template collegato</label>
@@ -216,7 +209,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
           </div>
         </div>
 
-        {/* Articoli del blocco (sola lettura) */}
         {bulkItems && bulkItems.length > 0 && (
           <div style={S.field}>
             <label style={S.label}>Articoli nel blocco ({bulkItems.length})</label>
@@ -224,17 +216,17 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
               {bulkItems.map((item, i) => (
                 <div key={item.stock_id || i} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "8px 11px", borderRadius: 9,
-                  background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)",
+                  padding: "9px 12px", borderRadius: 10,
+                  background: "#F5F5F5", border: "1px solid #EBEBEB",
                   gap: 8,
                 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#111111" }}>
                     {item.name || "—"}
                   </span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.4)", flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: "#888888", flexShrink: 0 }}>
                     costo €{fmtM(item.cost)}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#00e5c3", flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#6bb800", flexShrink: 0 }}>
                     €{fmtM(item.sale_price)}
                   </span>
                 </div>
@@ -243,7 +235,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
           </div>
         )}
 
-        {/* Note */}
         <div style={S.field}>
           <label style={S.label}>Note</label>
           <textarea ref={notesRef} style={{ ...S.input, minHeight: 64, resize: "vertical" }}
@@ -251,11 +242,11 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
           />
         </div>
 
-        {error && <div style={S.err}>❌ {error}</div>}
+        {error && <div style={S.err}>⚠ {error}</div>}
 
         <div style={S.row}>
           <button style={S.btnGhost} onClick={onClose} disabled={isPending}>Annulla</button>
-          <button style={S.btnPrimary} onClick={handleSubmit} disabled={isPending}>
+          <button style={{ ...S.btnPrimary, opacity: isPending ? .7 : 1 }} onClick={handleSubmit} disabled={isPending}>
             {isPending ? "Salvataggio…" : mode === "add" ? "Aggiungi vendita" : "Salva modifiche"}
           </button>
         </div>

@@ -13,27 +13,27 @@ type Props = {
 const S = {
   overlay: {
     position: "fixed" as const, inset: 0, zIndex: 100,
-    background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)",
+    background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)",
     display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
     overflowY: "auto" as const,
   },
   modal: {
-    background: "#121216", border: "1px solid rgba(255,255,255,.12)",
+    background: "#ffffff", border: "none",
     borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 560,
-    boxShadow: "0 32px 80px rgba(0,0,0,.6)",
+    boxShadow: "0 24px 60px rgba(0,0,0,.14)",
     margin: "auto",
   },
-  title: { fontSize: 17, fontWeight: 700, marginBottom: 20 },
+  title: { fontSize: 17, fontWeight: 700, color: "#111111", marginBottom: 20 },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", marginBottom: 12 },
   field: { marginBottom: 12 },
   label: {
-    display: "block", fontSize: 11, color: "rgba(255,255,255,.45)",
-    marginBottom: 5, fontWeight: 500, textTransform: "uppercase" as const, letterSpacing: ".04em",
+    display: "block", fontSize: 11, color: "#888888",
+    marginBottom: 5, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".05em",
   },
   input: {
-    width: "100%", padding: "9px 12px", borderRadius: 10,
-    border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.06)",
-    color: "rgba(255,255,255,.92)", fontSize: 13, fontFamily: "inherit",
+    width: "100%", padding: "10px 13px", borderRadius: 12,
+    border: "1px solid #EBEBEB", background: "#F5F5F5",
+    color: "#111111", fontSize: 13, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box" as const,
   },
   row: { display: "flex", gap: 10, marginTop: 24 },
@@ -83,21 +83,18 @@ export default function TemplateModal({ template: tpl, onClose }: Props) {
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={S.modal} onClick={e => e.stopPropagation()}>
-        <div style={S.title}>✏️ Modifica template</div>
+        <div style={S.title}>Modifica template</div>
 
-        {/* Nome interno */}
         <div style={S.field}>
           <label style={S.label}>Nome interno *</label>
           <input ref={nameRef} style={S.input} defaultValue={tpl.name} />
         </div>
 
-        {/* Titolo annuncio */}
         <div style={S.field}>
           <label style={S.label}>Titolo annuncio Vinted</label>
           <input ref={titleRef} style={S.input} defaultValue={tpl.title ?? ""} placeholder="Titolo che appare su Vinted" />
         </div>
 
-        {/* Riga: brand / taglia */}
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Brand</label>
@@ -109,7 +106,6 @@ export default function TemplateModal({ template: tpl, onClose }: Props) {
           </div>
         </div>
 
-        {/* Riga: prezzo / condizione */}
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Prezzo €</label>
@@ -122,13 +118,11 @@ export default function TemplateModal({ template: tpl, onClose }: Props) {
           </div>
         </div>
 
-        {/* Categoria */}
         <div style={S.field}>
           <label style={S.label}>Categoria</label>
           <input ref={categoryRef} style={S.input} defaultValue={tpl.category ?? ""} placeholder="Uomo > Scarpe > Sneakers" />
         </div>
 
-        {/* Riga: colori / materiali */}
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Colori</label>
@@ -140,7 +134,6 @@ export default function TemplateModal({ template: tpl, onClose }: Props) {
           </div>
         </div>
 
-        {/* Descrizione */}
         <div style={S.field}>
           <label style={S.label}>Descrizione</label>
           <textarea ref={descriptionRef}
@@ -150,19 +143,24 @@ export default function TemplateModal({ template: tpl, onClose }: Props) {
           />
         </div>
 
-        {error && <div style={{ marginBottom: 12, fontSize: 12, color: "#ff4d6d" }}>❌ {error}</div>}
+        {error && (
+          <div style={{ marginBottom: 12, fontSize: 12, color: "#FF4D4D", padding: "9px 12px", background: "rgba(255,77,77,.07)", borderRadius: 10 }}>
+            ⚠ {error}
+          </div>
+        )}
 
         <div style={S.row}>
           <button onClick={onClose} disabled={isPending} style={{
-            flex: 1, padding: "10px", borderRadius: 10,
-            border: "1px solid rgba(255,255,255,.10)", background: "transparent",
-            color: "rgba(255,255,255,.55)", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            flex: 1, padding: "11px", borderRadius: 999,
+            border: "1px solid #EBEBEB", background: "#ffffff",
+            color: "#888888", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            fontFamily: "inherit",
           }}>Annulla</button>
           <button onClick={handleSave} disabled={isPending} style={{
-            flex: 2, padding: "10px", borderRadius: 10,
-            border: "1px solid rgba(22,194,163,.5)",
-            background: "rgba(22,194,163,.15)", color: "#16c2a3",
+            flex: 2, padding: "11px", borderRadius: 999,
+            border: "none", background: "#007782", color: "#ffffff",
             cursor: isPending ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700,
+            fontFamily: "inherit", opacity: isPending ? .7 : 1,
           }}>
             {isPending ? "Salvataggio…" : "Salva modifiche"}
           </button>
