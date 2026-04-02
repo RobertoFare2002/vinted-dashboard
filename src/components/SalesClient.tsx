@@ -17,6 +17,7 @@ type Props = {
   templates:    Template[];
   photoMap:     Record<string, string>;
   profileMap:   Record<string, string>;
+  profiles:     { id: string; name: string }[];
 };
 
 const G   = "#007782";
@@ -38,7 +39,7 @@ function fmt(n: number) {
   return n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function SalesClient({ initialSales, templates, photoMap, profileMap }: Props) {
+export default function SalesClient({ initialSales, templates, photoMap, profileMap, profiles }: Props) {
   const [modal, setModal]               = useState<{ mode: "add" | "edit"; sale?: SaleRow } | null>(null);
   const [filter, setFilter]             = useState<"all" | "open" | "closed">("all");
   const [search, setSearch]             = useState("");
