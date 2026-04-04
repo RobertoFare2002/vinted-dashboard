@@ -244,7 +244,7 @@ export default async function DashboardPage({
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: "clamp(20px, 2.2vw, 28px)", fontWeight: 800, marginBottom: 6, color: "#111111", letterSpacing: "-.03em" }}>
+        <h1 className="greeting-font" style={{ fontSize: "clamp(20px, 2.2vw, 28px)", fontWeight: 700, marginBottom: 6, color: "#111111", letterSpacing: "-.03em" }}>
           {greeting}, {firstName} 👋
         </h1>
         <p style={{ color: "#888888", fontSize: 14 }}>
@@ -255,6 +255,7 @@ export default async function DashboardPage({
         </p>
       </div>
       <DashboardCharts
+        selectedProfileId={selectedProfileId ?? null}
         kpi={kpi}
         revenueByMonth={revenueByMonth}
         topProducts={topProducts}
@@ -265,12 +266,14 @@ export default async function DashboardPage({
         allSales={allSales.map((s: any) => ({
           id: s.id,
           item_name: s.item_name,
+          buyer_seller: s.buyer_seller,
           amount: s.amount,
           cost: s.cost,
           status: s.status,
           transaction_date: s.transaction_date,
           profile_id: s.profile_id,
           template_id_ext: s.template_id_ext,
+          raw_data: s.raw_data,
         }))}
         photoMap={photoMap}
         profiles={profiles}

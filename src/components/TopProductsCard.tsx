@@ -1,6 +1,6 @@
 "use client";
 // src/components/TopProductsCard.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Package } from "lucide-react";
 
 const GRN = "#6bb800";
@@ -14,12 +14,15 @@ const LT  = "#F5F5F5";
 type SaleRow = {
   id?: string;
   item_name?: string;
+  buyer_seller?: string;
   amount?: number;
   cost?: number;
   status?: string;
   transaction_date?: string;
   template_id_ext?: string;
   purchased_at?: string;
+  profile_id?: string | null;
+  raw_data?: Record<string, unknown> | null;
 };
 
 type StockItem = {
@@ -33,6 +36,7 @@ type Props = {
   sales:    SaleRow[];
   photoMap: Record<string, string>;
   stockItems: StockItem[];
+  selectedProfileId?: string | null;
 };
 
 type ViewKey = "assoluto" | "percentuale" | "velocita";
@@ -54,12 +58,17 @@ function fmt(n: number) {
 function buildRanking(sales: SaleRow[], photoMap: Record<string, string>, stockItems: StockItem[], view: ViewKey): RankedItem[] {
   // Includi sia vendite chiuse che in sospeso, escludi bundle interi
   // Non filtrare su s.cost qui — alcune righe possono avere cost=null e vanno comunque mostrate
-  const closed = sales.filter(s =>
-    (s.status === "closed" || s.status === "open") &&
-    s.amount &&
-    s.item_name &&
-    !/^bundle/i.test(s.item_name.trim())
-  );
+  const closed = sales.filter(s => {
+    const name = s.item_name || s.buyer_seller || "";
+    const cost = Number(s.cost ?? 0);
+    return (
+      (s.status === "closed" || s.status === "open") &&
+      s.amount &&
+      cost > 1 &&
+      name.trim() !== "" &&
+      !/^bundle/i.test(name.trim())
+    );
+  });
 
   // Map template_id_ext → purchased_at from stockItems for velocity
   const purchasedMap: Record<string, string> = {};
@@ -76,7 +85,7 @@ function buildRanking(sales: SaleRow[], photoMap: Record<string, string>, stockI
         const sell = Number(s.amount ?? 0);
         const abs  = sell - buy;
         return {
-          name:     s.item_name!,
+          name:     (s.item_name || s.buyer_seller || "Articolo"),
           photoUrl: s.template_id_ext ? (photoMap[s.template_id_ext] ?? null) : null,
           buy, sell,
           value:   abs,
@@ -96,7 +105,7 @@ function buildRanking(sales: SaleRow[], photoMap: Record<string, string>, stockI
         const sell = Number(s.amount ?? 0);
         const pct  = Math.round(((sell - buy) / buy) * 100);
         return {
-          name:     s.item_name!,
+          name:     (s.item_name || s.buyer_seller || "Articolo"),
           photoUrl: s.template_id_ext ? (photoMap[s.template_id_ext] ?? null) : null,
           buy, sell,
           value:   pct,
@@ -108,17 +117,56 @@ function buildRanking(sales: SaleRow[], photoMap: Record<string, string>, stockI
       .slice(0, 3);
   }
 
-  // velocita: giorni tra purchased_at e transaction_date
+  // Map stock_id → purchased_at from all stock items
+  const purchasedByStockId: Record<string, string> = {};
+  // Map name → earliest purchased_at (for fallback when no stock_id/template match)
+  const purchasedByName: Record<string, string> = {};
+  for (const si of stockItems) {
+    if (si.id && si.purchased_at) {
+      purchasedByStockId[si.id] = si.purchased_at;
+    }
+    if (si.name && si.purchased_at) {
+      const key = si.name.toLowerCase().trim();
+      // Keep the earliest purchase date for each name
+      if (!purchasedByName[key] || si.purchased_at < purchasedByName[key]) {
+        purchasedByName[key] = si.purchased_at;
+      }
+    }
+  }
+
+  // Parse raw_data safely (it may be a JSON string or already an object)
+  function parseRaw(raw: unknown): Record<string, unknown> {
+    if (!raw) return {};
+    if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return {}; } }
+    if (typeof raw === "object") return raw as Record<string, unknown>;
+    return {};
+  }
+
+  // velocita: giorni tra purchased_at (dallo stock) e transaction_date
+  // Include ALL closed sales with transaction_date - use purchased_at when available
   return closed
-    .filter(s => s.transaction_date && s.template_id_ext && purchasedMap[s.template_id_ext!])
+    .filter(s => !!s.transaction_date)
     .map(s => {
-      const bought = new Date(purchasedMap[s.template_id_ext!]);
+      const rd = parseRaw(s.raw_data);
+      const stockId = rd.stock_id as string | undefined;
+      // Try to find purchased_at: template map → stock_id map → name map → null
+      const saleName = (s.item_name || s.buyer_seller || "").toLowerCase().trim();
+      const purchasedAt =
+        (s.template_id_ext && purchasedMap[s.template_id_ext]) ||
+        (stockId && purchasedByStockId[stockId]) ||
+        (saleName && purchasedByName[saleName]) ||
+        null;
+      const buy  = Number(s.cost ?? 0);
+      const sell = Number(s.amount ?? 0);
+      if (!purchasedAt) {
+        // No purchase date available — exclude from velocity ranking
+        return null;
+      }
+      const bought = new Date(purchasedAt);
       const sold   = new Date(s.transaction_date!);
       const days   = Math.max(0, Math.floor((sold.getTime() - bought.getTime()) / 86400000));
-      const buy    = Number(s.cost ?? 0);
-      const sell   = Number(s.amount ?? 0);
       return {
-        name:     s.item_name!,
+        name:     (s.item_name || s.buyer_seller || "Articolo"),
         photoUrl: s.template_id_ext ? (photoMap[s.template_id_ext] ?? null) : null,
         buy, sell,
         value:   days,
@@ -126,7 +174,10 @@ function buildRanking(sales: SaleRow[], photoMap: Record<string, string>, stockI
         color:   V,
       };
     })
+    .filter((x): x is RankedItem => x !== null)
     .sort((a, b) => a.value - b.value)
+    // Deduplica per nome: tieni solo il primo (più veloce) per ogni nome
+    .filter((item, _idx, arr) => arr.findIndex(x => x.name === item.name) === _idx)
     .slice(0, 3);
 }
 
@@ -154,13 +205,30 @@ function Photo({ url, size }: { url: string | null; size: number }) {
   );
 }
 
-export default function TopProductsCard({ sales, photoMap, stockItems }: Props) {
+export default function TopProductsCard({ sales, photoMap, stockItems, selectedProfileId }: Props) {
   const [view, setView] = useState<ViewKey>("assoluto");
   const v = VIEWS.find(x => x.key === view)!;
 
+  // Auto-rotate every 8 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setView(current => {
+        const idx = VIEWS.findIndex(x => x.key === current);
+        return VIEWS[(idx + 1) % VIEWS.length].key;
+      });
+    }, 8000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Filter by selected profile
+  const filteredSales = useMemo(() => {
+    if (!selectedProfileId) return sales;
+    return sales.filter(s => s.profile_id === selectedProfileId);
+  }, [sales, selectedProfileId]);
+
   const items = useMemo(
-    () => buildRanking(sales, photoMap, stockItems, view),
-    [sales, photoMap, stockItems, view]
+    () => buildRanking(filteredSales, photoMap, stockItems, view),
+    [filteredSales, photoMap, stockItems, view]
   );
 
   const [hero, r2, r3] = items;
@@ -175,6 +243,11 @@ export default function TopProductsCard({ sales, photoMap, stockItems }: Props) 
     <>
       <style>{`
         .tpc-root { background:${W}; border-radius:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:22px 22px 16px; }
+        .tpc-slide-in { animation: tpcSlideIn 0.4s cubic-bezier(.22,.68,0,1.2) both; }
+        @keyframes tpcSlideIn {
+          from { opacity: 0; transform: translateX(-22px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
         .tpc-title { font-size:13px; font-weight:700; color:${INK}; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
         .tpc-hero { border-radius:12px; padding:12px; margin-bottom:10px; border:0.5px solid transparent; }
         .tpc-hero-row { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
@@ -204,6 +277,7 @@ export default function TopProductsCard({ sales, photoMap, stockItems }: Props) 
         </div>
 
         {/* Hero #1 */}
+        <div key={view} className="tpc-slide-in">
         <div className="tpc-hero" style={{ background: v.heroBg, borderColor: v.heroBorder }}>
           <div className="tpc-hero-row">
             <div className="tpc-hero-left">
@@ -255,6 +329,7 @@ export default function TopProductsCard({ sales, photoMap, stockItems }: Props) 
           </div>
         )}
 
+        </div>{/* end blur wrapper */}
         {/* Dots */}
         <div className="tpc-dots">
           {VIEWS.map(({ key }) => (

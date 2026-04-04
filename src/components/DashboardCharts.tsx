@@ -16,6 +16,7 @@ import ProfilesCard from "@/components/ProfilesCard";
 import SalesChartCard from "@/components/SalesChartCard";
 import ConversionRateCard from "@/components/ConversionRateCard";
 import TopProductsCard from "@/components/TopProductsCard";
+import AvgTicketCard from "@/components/AvgTicketCard";
 
 /* ── palette ── */
 const GREEN    = "#007782";
@@ -106,6 +107,7 @@ interface Props {
   photoMap?: Record<string, string>;
   profiles?: { id: string; name: string; avatar_url?: string | null }[];
   stockItems?: StockItem[];
+  selectedProfileId?: string | null;
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -121,9 +123,64 @@ const STOCK_STATUS_META: Record<string, { label: string; color: string; bg: stri
 };
 
 
+// Inline Cash Flow card for fx-chart column
+function CashFlowInChart({ kpi }: { kpi: Props["kpi"] }) {
+  const { allRevenue, allPending, allCost, stockCost } = kpi;
+  const cfEntrate = allRevenue + allPending;
+  const cfUscite  = allCost + stockCost;
+  const cfSaldo   = cfEntrate - cfUscite;
+  const cfRate    = cfUscite > 0 ? ((cfEntrate / cfUscite) * 100).toFixed(1) : "—";
+  const isNeg     = cfSaldo < 0;
+  const fmt = (n: number) => n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <div className="fx-card">
+      <div style={{ fontSize: 11, color: SL, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }}>
+        Cash flow — all time
+      </div>
+
+      <div style={{ height: "0.5px", background: BD, marginBottom: 12 }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+        {/* Sinistra: saldo + rate */}
+        <div>
+          <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1, color: isNeg ? RED : "#6bb800", marginBottom: 4 }}>
+            {isNeg ? "−" : "+"}€{Math.abs(Math.round(cfSaldo))}
+          </div>
+          <div style={{ fontSize: 12, color: SL, marginBottom: 2 }}>saldo netto</div>
+          <div style={{ fontSize: 12, color: SL }}>{cfRate}% recovery rate</div>
+        </div>
+        {/* Destra: entrate + uscite */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end" }}>
+          <div>
+            <div style={{ fontSize: 10, color: SL, marginBottom: 3, textAlign: "right" }}>entrate</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M5 8V2M2 5l3-3 3 3" stroke="#1D9E75" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#6bb800" }}>€{fmt(cfEntrate)}</span>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: SL, marginBottom: 3, textAlign: "right" }}>uscite</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#FCEBEB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M5 2v6M2 5l3 3 3-3" stroke="#E24B4A" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: RED }}>€{fmt(cfUscite)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardCharts({
   kpi, revenueByMonth, topProducts, byProfile, staleStock, marginsByFascia,
-  recentSales = [], allSales = [], photoMap = {}, profiles = [], stockItems = []
+  recentSales = [], allSales = [], photoMap = {}, profiles = [], stockItems = [], selectedProfileId = null
 }: Props) {
   const [searchTerm, setSearchTerm]           = useState("");
   const [statusFilter, setStatusFilter]       = useState<string | null>(null);
@@ -131,12 +188,13 @@ export default function DashboardCharts({
   const [stockSearch, setStockSearch]         = useState("");
   const [spotlightKey, setSpotlightKey]       = useState<"profit"|"revenue"|"cost"|"pending">("profit");
   const [stockSpotKey, setStockSpotKey]       = useState<"roi"|"costo"|"prezzo"|"bloccato">("roi");
+  const [viewAnimKey, setViewAnimKey]         = useState(0);
 
   // Track window width to show/hide chart column content inline
   // Start with false to avoid hydration mismatch (server doesn't know window width)
   const [showChartInline, setShowChartInline] = useState<boolean>(false);
   useEffect(() => {
-    const check = () => setShowChartInline(window.innerWidth <= 1060);
+    const check = () => setShowChartInline(window.innerWidth <= 1380);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -348,6 +406,30 @@ export default function DashboardCharts({
         .fx-dark-bar {
           height: 3px; border-radius: 2px; margin-top: 12px;
         }
+        .fx-view-slide { animation: fxViewSlide 0.4s cubic-bezier(.22,.68,0,1.2) both; }
+        @keyframes fxViewSlide {
+          from { opacity: 0; transform: translateX(-16px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        .fx-view-fixed { min-height: 80px; overflow: hidden; }
+        .fx-wallets-fixed { min-height: 80px; }
+
+        /* Flip 3D per la card sinistra (toggle vendite/magazzino) */
+        .fx-flip-in { animation: fxFlipIn 0.4s cubic-bezier(.22,.68,0,1.2) both; }
+        @keyframes fxFlipIn {
+          from { opacity: 0; transform: rotateY(-20deg) translateX(-10px); }
+          to   { opacity: 1; transform: rotateY(0) translateX(0); }
+        }
+
+        /* Elastic stagger per le card destra */
+        .fx-stagger-0 { animation: fxElastic 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 0ms; }
+        .fx-stagger-1 { animation: fxElastic 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 70ms; }
+        .fx-stagger-2 { animation: fxElastic 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 140ms; }
+        .fx-stagger-3 { animation: fxElastic 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 210ms; }
+        @keyframes fxElastic {
+          from { opacity: 0; transform: translateX(-28px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
         @media (max-width: 600px) {
           .fx-4cards { grid-template-columns: 1fr 1fr; }
           .fx-search-wrap { width: 100%; }
@@ -372,44 +454,50 @@ export default function DashboardCharts({
                 {activeView === "magazzino" ? <Package size={13} color={BLU} /> : <><span style={{ fontSize: 12 }}>🇮🇹</span> {currentYear}</>}
               </span>
             </div>
-            {activeView === "magazzino" ? (
-              <>
-                <div className="fx-card-value" style={{ color: BLU }}>{stockCount}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <span className="fx-delta" style={{ color: BLU, background: "#dbeafe" }}>
-                    <ArrowUpRight size={12} /> {ytdStockCount} quest&apos;anno
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="fx-card-value" style={{ color: ytdProfit >= 0 ? "#6bb800" : RED }}>€{fmt(ytdProfit)}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <span className={`fx-delta ${ytdMargin >= 0 ? "fx-delta-up" : "fx-delta-down"}`}>
-                    {ytdMargin >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                    {ytdMargin}%
-                  </span>
-                  <span className="fx-subtitle">margine sul costo</span>
-                </div>
-              </>
-            )}
+            <div className="fx-view-fixed">
+              <div key={viewAnimKey} className="fx-flip-in">
+                {activeView === "magazzino" ? (
+                  <>
+                    <div className="fx-card-value" style={{ color: BLU }}>{stockCount}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                      <span className="fx-delta" style={{ color: BLU, background: "#dbeafe" }}>
+                        <ArrowUpRight size={12} /> {ytdStockCount} quest&apos;anno
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="fx-card-value" style={{ color: ytdProfit >= 0 ? "#6bb800" : RED }}>€{fmt(ytdProfit)}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                      <span className={`fx-delta ${ytdMargin >= 0 ? "fx-delta-up" : "fx-delta-down"}`}>
+                        {ytdMargin >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                        {ytdMargin}%
+                      </span>
+                      <span className="fx-subtitle">margine sul costo</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
 
             {/* Toggle Vendite / Magazzino */}
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 className={`fx-tab-btn ${activeView === "vendite" ? "fx-tab-active-vendite" : "fx-tab-inactive"}`}
-                onClick={() => setActiveView("vendite")}
+                onClick={() => { setActiveView("vendite"); setViewAnimKey(k => k + 1); }}
               >
                 <ShoppingBag size={14} /> Vendite
               </button>
               <button
                 className={`fx-tab-btn ${activeView === "magazzino" ? "fx-tab-active-magazzino" : "fx-tab-inactive"}`}
-                onClick={() => setActiveView("magazzino")}
+                onClick={() => { setActiveView("magazzino"); setViewAnimKey(k => k + 1); }}
               >
                 <Package size={14} /> Magazzino
               </button>
             </div>
 
+            <div className="fx-wallets-fixed">
+            <div key={viewAnimKey + 100} className="fx-flip-in">
             <div className="fx-wallets">
               {activeView === "vendite" ? (<>
                 <div className="fx-wallet-item">
@@ -445,6 +533,8 @@ export default function DashboardCharts({
                 </div>
               </>)}
             </div>
+            </div>
+            </div>
           </div>
 
           {/* Profili */}
@@ -456,52 +546,6 @@ export default function DashboardCharts({
             <ProfilesCard profiles={profiles} />
           </div>
 
-          {/* Cash Flow */}
-          {(() => {
-            const cfEntrate = allRevenue + allPending;
-            const cfUscite  = allCost + stockCost;
-            const cfSaldo   = cfEntrate - cfUscite;
-            const cfNeg     = cfSaldo < 0;
-            const cfRate    = cfUscite > 0 ? ((cfEntrate / cfUscite) * 100).toFixed(1) : "—";
-            return (
-              <div className="fx-card" style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: SL, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 14 }}>
-                  Cash flow — all time
-                </div>
-                <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1, color: cfNeg ? RED : "#6bb800", marginBottom: 6 }}>
-                  {cfNeg ? "−" : "+"}€{Math.abs(Math.round(cfSaldo))}
-                </div>
-                <div style={{ fontSize: 12, color: SL, marginBottom: 4 }}>saldo netto</div>
-                <div style={{ fontSize: 12, color: SL, marginBottom: 16 }}>{cfRate}% recovery rate</div>
-                <div style={{ height: "0.5px", background: BD, marginBottom: 14 }} />
-                <div style={{ display: "flex", justifyContent: "center", gap: 20, alignItems: "center" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontSize: 11, color: SL }}>entrate</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M5 8V2M2 5l3-3 3 3" stroke="#1D9E75" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "#6bb800" }}>€{fmt(cfEntrate)}</span>
-                    </div>
-                  </div>
-                  <div style={{ width: "0.5px", height: 32, background: BD }} />
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontSize: 11, color: SL }}>uscite</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#FCEBEB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M5 2v6M2 5l3 3 3-3" stroke="#E24B4A" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: RED }}>€{fmt(cfUscite)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
         </div>
 
         {/* ═══ RIGHT COLUMN ═══ */}
@@ -745,98 +789,68 @@ export default function DashboardCharts({
                 </div>
               </div>
 
-              {/* Card Clearance */}
-              {(() => {
-                const staleList = stockItems
-                  .filter(i => i.status === "available" && i.purchased_at && Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60)
-                  .sort((a, b) => new Date(a.purchased_at!).getTime() - new Date(b.purchased_at!).getTime());
-
-                return (
-                  <>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
-                    <div className="fx-card">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Clearance</div>
-                        {staleList.length > 0 && (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: AMB, background: "transparent", padding: "2px 0" }}>
-                            {staleList.length}
-                          </span>
-                        )}
-                      </div>
-                      {staleList.length === 0 ? (
-                        <div style={{ padding: "24px 0", fontSize: 13, color: SL, textAlign: "center" }}>Nessun articolo fermo da più di 60 giorni</div>
-                      ) : (
-                        <div className="fx-recent-scroll" style={{ maxHeight: 280 }}>
-                          <table className="fx-table">
-                            <thead>
-                              <tr>
-                                <th></th>
-                                <th>Articolo</th>
-                                <th style={{ textAlign: "right" }}>Acquistato</th>
-                                <th style={{ textAlign: "right" }}>Giorni</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {staleList.map((item, i) => {
-                                const days = Math.floor((nowTs - new Date(item.purchased_at!).getTime()) / 86400000);
-                                const dateStr = new Date(item.purchased_at!).toLocaleDateString("it", { day: "2-digit", month: "2-digit", year: "numeric" });
-                                const photoUrl = item.template_id_ext ? photoMap[item.template_id_ext] : null;
-                                return (
-                                  <tr key={item.id || i}>
-                                    <td style={{ width: 44, paddingRight: 0 }}>
-                                      {photoUrl ? (
-                                        <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", border: "none", display: "block" }} />
-                                      ) : (
-                                        <div style={{ width: 36, height: 36, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", border: "none" }}>
-                                          <Package size={14} color={SL} />
-                                        </div>
-                                      )}
-                                    </td>
-                                    <td>
-                                      <div style={{ fontWeight: 500, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
-                                        {(item.name || "Articolo").slice(0, 35)}
-                                      </div>
-                                    </td>
-                                    <td style={{ textAlign: "right", fontSize: 12, color: SL, whiteSpace: "nowrap" }}>{dateStr}</td>
-                                    <td style={{ textAlign: "right" }}>
-                                      <span style={{ fontSize: 12, fontWeight: 600, color: AMB, background: "transparent", padding: "0", whiteSpace: "nowrap" }}>
-                                        {days}gg
-                                      </span>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Prossimamente */}
-                    <div className="fx-card" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <div style={{ textAlign: "center", color: SL }}>
-                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: LT, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                          <Clock size={18} color={SL} />
-                        </div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: INK }}>Prossimamente</div>
-                        <div style={{ fontSize: 11, color: SL, marginTop: 4 }}>Nuove funzionalità in arrivo</div>
-                      </div>
-                    </div>
-                    </div>
-
-                  </>
-                );
-              })()}
+              {/* 3-card row under stock table: 2x prossimamente + ticket medio acquisto */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: INK }}>Prossimamente</div>
+                  <div style={{ fontSize: 11, color: SL, textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+                </div>
+                <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: INK }}>Prossimamente</div>
+                  <div style={{ fontSize: 11, color: SL, textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+                </div>
+                <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} defaultView="acquisto" />
+              </div>
             </>
           )}
 
           {/* Chart cards shown inline when window is too narrow for 3 columns */}
           {showChartInline && activeView === "vendite" && (
             <>
-              <SalesChartCard sales={recentSales} />
-              <ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} />
-              <TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} />
+              <div key={`iv-${viewAnimKey}-0`} className="fx-stagger-0"><SalesChartCard sales={recentSales} /></div>
+              <div key={`iv-${viewAnimKey}-1`} className="fx-stagger-1"><TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} selectedProfileId={selectedProfileId} /></div>
             </>
+          )}
+          {showChartInline && activeView === "magazzino" && (
+            <div key={`im-${viewAnimKey}-0`} className="fx-stagger-0"><ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} /></div>
+          )}
+
+          {/* Bottom row: 2x prossimamente + ticket medio */}
+          {activeView === "vendite" && (
+            <div key={`bottom-${viewAnimKey}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              {/* Prossimamente 1 */}
+              <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+              </div>
+              {/* Prossimamente 2 */}
+              <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+              </div>
+              {/* Ticket Medio */}
+              <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} />
+            </div>
           )}
 
         </div>{/* end fx-right */}
@@ -845,23 +859,76 @@ export default function DashboardCharts({
         <div className="fx-chart">
           {activeView === "vendite" ? (
             <>
-              <SalesChartCard sales={recentSales} />
-              <ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} />
-              <TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} />
+              <div key={`vendite-${viewAnimKey}-0`} className="fx-stagger-0"><SalesChartCard sales={recentSales} /></div>
+              <div key={`vendite-${viewAnimKey}-1`} className="fx-stagger-1"><CashFlowInChart kpi={kpi} /></div>
+              <div key={`vendite-${viewAnimKey}-2`} className="fx-stagger-2"><TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} selectedProfileId={selectedProfileId} /></div>
             </>
           ) : (
             <>
-              {[1,2].map(i => (
-                <div key={i} className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 8 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
+              <div key={`magazzino-${viewAnimKey}-0`} className="fx-stagger-0"><ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} /></div>
+              <div key={`magazzino-${viewAnimKey}-1`} className="fx-stagger-1">{/* Clearance */}
+              {(() => {
+                const staleList = stockItems
+                  .filter(i => i.status === "available" && i.purchased_at && Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60)
+                  .sort((a, b) => new Date(a.purchased_at!).getTime() - new Date(b.purchased_at!).getTime());
+                return (
+                  <div className="fx-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Clearance</div>
+                      {staleList.length > 0 && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: AMB }}>{staleList.length}</span>
+                      )}
+                    </div>
+                    {staleList.length === 0 ? (
+                      <div style={{ padding: "24px 0", fontSize: 13, color: SL, textAlign: "center" }}>Nessun articolo fermo da più di 60 giorni</div>
+                    ) : (
+                      <div className="fx-recent-scroll" style={{ maxHeight: 320, overflowX: "hidden" }}>
+                      <table className="fx-table" style={{ tableLayout: "fixed", width: "100%" }}>
+                          <colgroup>
+                            <col style={{ width: 44 }} />
+                            <col />
+                            <col style={{ width: 52 }} />
+                          </colgroup>
+                          <thead>
+                            <tr>
+                              <th></th>
+                              <th>Articolo</th>
+                              <th style={{ textAlign: "right" }}>Giorni</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {staleList.map((item, i) => {
+                              const days = Math.floor((nowTs - new Date(item.purchased_at!).getTime()) / 86400000);
+                              const photoUrl = item.template_id_ext ? photoMap[item.template_id_ext] : null;
+                              return (
+                                <tr key={item.id || i}>
+                                  <td style={{ paddingRight: 0 }}>
+                                    {photoUrl ? (
+                                      <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", border: "none", display: "block" }} />
+                                    ) : (
+                                      <div style={{ width: 36, height: 36, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", border: "none" }}>
+                                        <Package size={14} color={SL} />
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ overflow: "hidden" }}>
+                                    <div style={{ fontWeight: 500, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {item.name || "Articolo"}
+                                    </div>
+                                  </td>
+                                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                                    <span style={{ fontSize: 12, fontWeight: 600, color: AMB }}>{days}gg</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
-                  <div style={{ fontSize: 11, color: "#888888" }}>Nuove funzionalità in arrivo</div>
-                </div>
-              ))}
+                );
+              })()}</div>
             </>
           )}
         </div>
