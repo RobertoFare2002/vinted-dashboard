@@ -194,7 +194,7 @@ export default function DashboardCharts({
   // Start with false to avoid hydration mismatch (server doesn't know window width)
   const [showChartInline, setShowChartInline] = useState<boolean>(false);
   useEffect(() => {
-    const check = () => setShowChartInline(window.innerWidth <= 1380);
+    const check = () => setShowChartInline(window.innerWidth <= 1200);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
