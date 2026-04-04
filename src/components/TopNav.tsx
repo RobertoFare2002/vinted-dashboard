@@ -70,6 +70,22 @@ export default function TopNav({
     });
   }, []);
 
+  // Listen for mobile settings open event
+  useEffect(() => {
+    function handleMobileSettings() { setSettingsOpen(true); }
+    window.addEventListener("open-settings", handleMobileSettings);
+    return () => window.removeEventListener("open-settings", handleMobileSettings);
+  }, []);
+
+  // When modal opens, remove overflow:hidden from shell so fixed overlay works
+  useEffect(() => {
+    const shell = document.querySelector(".shell") as HTMLElement | null;
+    if (shell) {
+      shell.style.overflow = settingsOpen ? "visible" : "hidden";
+    }
+    document.body.style.overflow = settingsOpen ? "hidden" : "";
+  }, [settingsOpen]);
+
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -195,7 +211,7 @@ export default function TopNav({
       <style>{`
         .topnav {
           display: flex; align-items: center;
-          padding: 0 24px; height: 64px;
+          padding: 0 24px; height: 64px; width: 100%;
           background: #ffffff; border-bottom: 1px solid #EBEBEB;
           position: sticky; top: 0; z-index: 50;
         }
@@ -260,7 +276,7 @@ export default function TopNav({
 
         /* Settings modal */
         .tn-settings-overlay {
-          position: fixed; inset: 0; z-index: 300;
+          position: fixed; inset: 0; z-index: 9999;
           background: rgba(0,0,0,.35); backdrop-filter: blur(6px);
           display: flex; align-items: center; justify-content: center; padding: 16px;
         }

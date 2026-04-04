@@ -17,8 +17,17 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const firstName = user.user_metadata?.display_name?.split(" ")[0]
+    ?? user.user_metadata?.full_name?.split(" ")[0]
+    ?? user.email?.split("@")[0]
+    ?? "Utente";
+
   return (
-    <DashboardShell userEmail={user.email ?? ""}>
+    <DashboardShell
+      userEmail={user.email ?? ""}
+      firstName={firstName}
+      avatarUrl={user.user_metadata?.avatar_url ?? null}
+    >
       {children}
     </DashboardShell>
   );

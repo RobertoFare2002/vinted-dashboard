@@ -196,7 +196,71 @@ html, body {
 @media (max-width: 1280px) { .shell-main { padding: 18px 18px 18px; } }
 @media (max-width: 1060px) { .shell-main { padding: 16px 14px 16px; } }
 @media (max-width: 860px)  { .shell-main { padding: 14px 12px 14px; } }
-@media (max-width: 480px)  { .shell-main { padding: 12px 10px 12px; } }
+@media (max-width: 480px)  { .shell-main { padding: 10px 10px 10px; } }
+
+/* ── MOBILE LAYOUT (<= 860px) ── */
+@media (max-width: 860px) {
+  /* shell-main becomes a scroll container */
+  .shell-main {
+    padding: 0 !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #F5F5F5;
+  }
+  /* page wrap stacks vertically, no fixed height */
+  .fx-page-wrap {
+    flex: none;
+    min-height: unset;
+    gap: 0;
+  }
+  /* desktop greeting hidden on mobile */
+  .desktop-greeting { display: none !important; }
+  /* grid wrap scrollable */
+  .fx-grid-wrap {
+    flex: none;
+    overflow: visible;
+    padding: 12px 12px 80px;
+  }
+  /* mobile grid: single col, no fixed height */
+  .fx-grid {
+    height: auto !important;
+    overflow: visible !important;
+    gap: 12px;
+  }
+  .fx-right {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  /* tab bar sizing */
+  .mtb-root {
+    padding: 10px 0 max(16px, env(safe-area-inset-bottom)) !important;
+  }
+  /* recent activity: max 4 rows */
+  .fx-recent-scroll {
+    max-height: 260px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  /* hide search bar, title row, date col, acquisto col, profilo col, margine% col on mobile */
+  .fx-mobile-hide { display: none !important; }
+  /* mobile table: cleaner rows */
+  .fx-table td { padding: 11px 8px !important; }
+  .fx-table th { padding: 8px 8px !important; }
+}
+
+/* mobile-hide: visible on desktop, hidden on mobile */
+.mobile-hide { display: block; }
+@media (max-width: 860px) { .mobile-hide { display: none !important; } }
+
+/* mobile-view-toggle: hidden on desktop, visible on mobile */
+.mobile-view-toggle { display: none; }
+@media (max-width: 860px) { .mobile-view-toggle { display: block; } }
+
+/* ── MOBILE HEADER visibility ── */
+.mobile-header-wrap { display: none; }
+@media (max-width: 860px) {
+  .mobile-header-wrap { display: block; }
+}
 
 /* ── TABLE RESPONSIVE COLUMNS ── */
 .fx-col-hide-md {}

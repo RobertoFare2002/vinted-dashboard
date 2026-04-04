@@ -1,6 +1,7 @@
 // src/app/(dashboard)/page.tsx
 import { createClient } from "@/lib/supabase/server";
 import DashboardCharts from "@/components/DashboardCharts";
+import MobileHeader from "@/components/MobileHeader";
 
 export const revalidate = 0;
 
@@ -224,8 +225,8 @@ export default async function DashboardPage({
     ?? "utente";
   const greeting = getGreeting();
 
-  // Recent sales for the activities table — usa tutte le vendite filtrate per profilo
-  const recentSales = sales.map((s: any) => ({
+  // Recent sales for the activities table — solo anno corrente, filtrate per profilo
+  const recentSales = sales.filter(isCurrentYear).map((s: any) => ({
     id: s.id,
     buyer_seller: s.buyer_seller,
     item_name: s.item_name,
@@ -243,7 +244,25 @@ export default async function DashboardPage({
 
   return (
     <div className="fx-page-wrap">
-      <div style={{ marginBottom: 8, flexShrink: 0 }}>
+      <div className="mobile-header-wrap">
+        <MobileHeader
+          firstName={firstName}
+          userEmail={user.email ?? ""}
+          avatarUrl={user.user_metadata?.avatar_url ?? null}
+          greeting={greeting}
+          ytdProfit={ytdProfit}
+          ytdMargin={ytdMargin}
+          ytdRevenue={ytdRevenue}
+          allRevenue={allRevenue}
+          profileRevenue={totalRevenue}
+          profilePending={totalPending}
+          stockCount={kpi.stockCount}
+          allCost={allCost}
+          profiles={profiles}
+          selectedProfileId={selectedProfileId ?? null}
+        />
+      </div>
+      <div className="desktop-greeting" style={{ marginBottom: 8, flexShrink: 0 }}>
         <h1 className="greeting-font" style={{ fontSize: "clamp(17px, 1.8vw, 26px)", fontWeight: 700, marginBottom: 4, color: "#111111", letterSpacing: "-.03em" }}>
           {greeting}, {firstName} 👋
         </h1>

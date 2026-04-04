@@ -1,6 +1,7 @@
 "use client";
 // src/components/DashboardCharts.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { changeSaleStatus } from "@/app/(dashboard)/sales/actions";
 import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -111,7 +112,7 @@ interface Props {
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  closed:  { label: "Completata", color: "#6bb800",  bg: GREEN_BG },
+  closed:  { label: "Completato", color: "#6bb800",  bg: GREEN_BG },
   open:    { label: "In sospeso", color: AMB,    bg: "#fef3c7" },
   pending: { label: "In attesa",  color: BLU,    bg: "#dbeafe" },
 };
@@ -189,6 +190,8 @@ export default function DashboardCharts({
   const [spotlightKey, setSpotlightKey]       = useState<"profit"|"revenue"|"cost"|"pending">("profit");
   const [stockSpotKey, setStockSpotKey]       = useState<"roi"|"costo"|"prezzo"|"bloccato">("roi");
   const [viewAnimKey, setViewAnimKey]         = useState(0);
+  const [closingId, setClosingId]             = useState<string | null>(null);
+  const [isPending, startTransition]          = useTransition();
 
   // Track window width to show/hide chart column content inline
   // Start with false to avoid hydration mismatch (server doesn't know window width)
@@ -407,21 +410,17 @@ export default function DashboardCharts({
           height: 3px; border-radius: 2px; margin-top: 12px;
         }
         .fx-tooltip-wrap {
-          position: relative; display: inline-flex; align-items: center;
-          overflow: hidden; max-width: 100%;
+          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          display: block; overflow: visible; pointer-events: none;
         }
         .fx-tooltip-wrap .fx-tooltip {
-          display: none; position: absolute; left: 0; top: calc(100% + 6px);
-          background: #111; color: #fff; font-size: 12px; font-weight: 500;
-          padding: 6px 10px; border-radius: 8px; white-space: nowrap;
-          z-index: 999; pointer-events: none;
-          box-shadow: 0 4px 16px rgba(0,0,0,.18);
+          display: none; position: absolute; left: 40px; bottom: calc(100% + 5px);
+          background: #ffffff; color: #111111; font-size: 12px; font-weight: 500;
+          padding: 4px 14px; border-radius: 999px; white-space: nowrap;
+          z-index: 9999; pointer-events: none;
+          border: 1px solid rgba(0,0,0,0.18);
         }
-        .fx-tooltip-wrap .fx-tooltip::before {
-          content: ''; position: absolute; bottom: 100%; left: 14px;
-          border: 5px solid transparent; border-bottom-color: #111;
-        }
-        .fx-tooltip-wrap:hover .fx-tooltip { display: block; }
+        td:hover .fx-tooltip-wrap .fx-tooltip { display: block; }
         .fx-view-slide { animation: fxViewSlide 0.4s cubic-bezier(.22,.68,0,1.2) both; }
         @keyframes fxViewSlide {
           from { opacity: 0; transform: translateX(-16px); }
@@ -537,25 +536,25 @@ export default function DashboardCharts({
                   <div style={{ fontSize: 10, color: AMB, fontWeight: 600, marginTop: 4 }}>Aperte</div>
                 </div>
                 <div className="fx-wallet-item">
-                  <div style={{ fontWeight: 700, fontSize: 13, color: INK }}>€{fmt(ytdRevenue + ytdPending)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>€{(ytdRevenue + ytdPending) >= 1000 ? ((ytdRevenue + ytdPending)/1000).toFixed(1)+"k" : fmt(ytdRevenue + ytdPending)}</div>
                   <div style={{ color: SL, marginTop: 2, fontSize: 10 }}>Ricavi totali</div>
                   <div style={{ fontSize: 10, color: BLU, fontWeight: 600, marginTop: 4 }}>YTD</div>
                 </div>
               </>) : (<>
                 <div className="fx-wallet-item">
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#6bb800" }}>€{fmt(potentialStockValue)}</div>
-                  <div style={{ color: SL, marginTop: 2, fontSize: 10 }}>Valore Potenziale</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#6bb800", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>€{potentialStockValue >= 1000 ? (potentialStockValue/1000).toFixed(1)+"k" : fmt(potentialStockValue)}</div>
+                  <div style={{ color: SL, marginTop: 2, fontSize: 10 }}>Val. Potenziale</div>
                   <div style={{ fontSize: 10, color: "#6bb800", fontWeight: 600, marginTop: 4 }}>Stock</div>
                 </div>
                 <div className="fx-wallet-item">
-                  <div style={{ fontWeight: 700, fontSize: 13, color: INK }}>€{fmt(stockCost)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>€{stockCost >= 1000 ? (stockCost/1000).toFixed(1)+"k" : fmt(stockCost)}</div>
                   <div style={{ color: SL, marginTop: 2, fontSize: 10 }}>Costo totale</div>
                   <div style={{ fontSize: 10, color: RED, fontWeight: 600, marginTop: 4 }}>Uscite</div>
                 </div>
                 <div className="fx-wallet-item">
                   <div style={{ fontWeight: 700, fontSize: 13, color: staleItems > 0 ? AMB : INK }}>{staleItems}</div>
                   <div style={{ color: SL, marginTop: 2, fontSize: 10 }}>Fermi &gt;60gg</div>
-                  <div style={{ fontSize: 10, color: staleItems > 0 ? AMB : SL, fontWeight: 600, marginTop: 4 }}>Da smaltire</div>
+                  <div style={{ fontSize: 10, color: staleItems > 0 ? AMB : SL, fontWeight: 600, marginTop: 4 }}>Clearance</div>
                 </div>
               </>)}
             </div>
@@ -577,11 +576,37 @@ export default function DashboardCharts({
         {/* ═══ RIGHT COLUMN ═══ */}
         <div className="fx-right">
 
+          {/* Mobile toggle — always visible on mobile, above content */}
+          <div className="mobile-view-toggle" style={{ flexShrink: 0 }}>
+            <div style={{ display: "flex", background: "#F0F0F0", borderRadius: 999, padding: 3 }}>
+              <button
+                onClick={() => { setActiveView("vendite"); setViewAnimKey(k => k + 1); }}
+                style={{
+                  flex: 1, padding: "9px 0", borderRadius: 999, border: "none",
+                  fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  background: activeView === "vendite" ? "#111" : "transparent",
+                  color: activeView === "vendite" ? "#fff" : "#888",
+                  transition: "all .18s",
+                }}
+              >Vendite</button>
+              <button
+                onClick={() => { setActiveView("magazzino"); setViewAnimKey(k => k + 1); }}
+                style={{
+                  flex: 1, padding: "9px 0", borderRadius: 999, border: "none",
+                  fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  background: activeView === "magazzino" ? "#111" : "transparent",
+                  color: activeView === "magazzino" ? "#fff" : "#888",
+                  transition: "all .18s",
+                }}
+              >Magazzino</button>
+            </div>
+          </div>
+
           {/* ── VISTA VENDITE ── */}
           {activeView === "vendite" && (
             <>
               {/* Spotlight */}
-              <div key={`spot-${viewAnimKey}`} className="fx-up-0" style={{ flexShrink: 0 }}>
+              <div key={`spot-${viewAnimKey}`} className="fx-up-0 mobile-hide" style={{ flexShrink: 0 }}>
               <div className="fx-card" style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 11, color: SL, marginBottom: 6 }}>{spot.label}</div>
                 <div style={{ fontSize: 40, fontWeight: 800, color: spot.color, letterSpacing: "-.04em", lineHeight: 1.1 }}>
@@ -617,7 +642,8 @@ export default function DashboardCharts({
               {/* Tabella Attività Recenti */}
               <div key={`recenti-${viewAnimKey}`} className="fx-up-1" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
               <div className="fx-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+
+                <div className="fx-mobile-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Attività Recenti</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div className="fx-search-wrap">
@@ -634,15 +660,17 @@ export default function DashboardCharts({
                         <th>Articolo</th>
                         <th className="fx-col-hide-md" style={{ textAlign: "right" }}>Acquisto</th>
                         <th style={{ textAlign: "right" }}>Vendita</th>
-                        <th style={{ textAlign: "right" }}>Margine</th>
+                        <th className="fx-mobile-hide" style={{ textAlign: "right" }}>%</th>
+                        <th className="fx-col-hide-md" style={{ textAlign: "right" }}>+/-</th>
                         <th>Stato</th>
+                        <th style={{ width: 44, textAlign: "center" }}></th>
                         <th className="fx-col-hide-sm">Profilo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredSales.length === 0 ? (
                         <tr>
-                          <td colSpan={7} style={{ textAlign: "center", color: SL, padding: "32px 12px" }}>
+                          <td colSpan={9} style={{ textAlign: "center", color: SL, padding: "32px 12px" }}>
                             {recentSales.length === 0 ? "Nessuna vendita recente" : "Nessun risultato"}
                           </td>
                         </tr>
@@ -661,7 +689,7 @@ export default function DashboardCharts({
                           return (
                             <tr key={sale.id || i}>
                               <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL, whiteSpace: "nowrap" }}>{dateStr}</td>
-                              <td style={{ maxWidth: 0 }}>
+                              <td style={{ maxWidth: 0, position: "relative" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                   {photoUrl ? (
                                     <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "none" }} />
@@ -670,13 +698,15 @@ export default function DashboardCharts({
                                       <ShoppingBag size={14} color={SL} />
                                     </div>
                                   )}
-                                  <span className="fx-tooltip-wrap" style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0, display: "block" }}>
                                     {(sale.buyer_seller || sale.item_name || "Vendita").slice(0, 40)}
-                                    {(sale.buyer_seller || sale.item_name || "").length > 25 && (
-                                      <span className="fx-tooltip">{sale.buyer_seller || sale.item_name}</span>
-                                    )}
                                   </span>
                                 </div>
+                                {(sale.buyer_seller || sale.item_name || "").length > 0 && (
+                                  <span className="fx-tooltip-wrap">
+                                    <span className="fx-tooltip">{sale.buyer_seller || sale.item_name}</span>
+                                  </span>
+                                )}
                               </td>
                               <td className="fx-col-hide-md" style={{ textAlign: "right" }}>
                                 <div style={{ fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
@@ -689,9 +719,14 @@ export default function DashboardCharts({
                                   {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
                                 </div>
                               </td>
-                              <td style={{ textAlign: "right" }}>
+                              <td className="fx-mobile-hide" style={{ textAlign: "right" }}>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: marginPct >= 0 ? "#6bb800" : RED }}>
                                   {marginPct >= 0 ? "▲" : "▼"} {Math.abs(marginPct)}%
+                                </span>
+                              </td>
+                              <td className="fx-col-hide-md" style={{ textAlign: "right" }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED }}>
+                                  {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
                                 </span>
                               </td>
                               <td>
@@ -708,6 +743,40 @@ export default function DashboardCharts({
                                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: sMeta.color, display: "inline-block", flexShrink: 0 }} />
                                   {sMeta.label}
                                 </span>
+                              </td>
+                              <td style={{ textAlign: "center", width: 44 }}>
+                                {(sale.status === "open" || !sale.status) && sale.id && (
+                                  <button
+                                    disabled={closingId === sale.id}
+                                    onClick={() => {
+                                      setClosingId(sale.id!);
+                                      startTransition(async () => {
+                                        try {
+                                          await changeSaleStatus(sale.id!, "closed");
+                                        } finally {
+                                          setClosingId(null);
+                                        }
+                                      });
+                                    }}
+                                    style={{
+                                      padding: "4px", borderRadius: 999,
+                                      border: "1.5px dashed #6bb800",
+                                      background: closingId === sale.id ? "#EAF3DE" : W,
+                                      cursor: closingId === sale.id ? "not-allowed" : "pointer",
+                                      transition: "all .15s",
+                                      opacity: closingId === sale.id ? .6 : 1,
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      width: 24, height: 24,
+                                    }}
+                                  >
+                                    {closingId === sale.id
+                                      ? <span style={{ fontSize: 10, color: "#3B6D11" }}>...</span>
+                                      : <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 6.5L9 1.5" stroke="#3B6D11" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    }
+                                  </button>
+                                )}
                               </td>
                               <td className="fx-col-hide-sm" style={{ fontSize: 12, color: SL }}>
                                 {profiles.find((p: any) => p.id === sale.profile_id)?.name ?? "—"}
@@ -740,7 +809,14 @@ export default function DashboardCharts({
                   </div>
                 </div>
                 <div className="fx-recent-scroll" style={{ maxHeight: 480 }}>
-                  <table className="fx-table">
+                  <table className="fx-table" style={{ tableLayout: "fixed", width: "100%" }}>
+                    <colgroup>
+                      <col style={{ width: "35%" }} />
+                      <col className="fx-col-hide-md" style={{ width: "12%" }} />
+                      <col className="fx-col-hide-md" style={{ width: "18%" }} />
+                      <col style={{ width: "20%" }} />
+                      <col style={{ width: "15%" }} />
+                    </colgroup>
                     <thead>
                       <tr>
                         <th>Articolo</th>
@@ -770,7 +846,7 @@ export default function DashboardCharts({
 
                           return (
                             <tr key={item.id || i}>
-                              <td style={{ maxWidth: 0 }}>
+                              <td style={{ maxWidth: 0, position: "relative" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                   {photoUrl ? (
                                     <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "none" }} />
@@ -779,13 +855,15 @@ export default function DashboardCharts({
                                       <Package size={14} color={SL} />
                                     </div>
                                   )}
-                                  <span className="fx-tooltip-wrap" style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0, display: "block" }}>
                                     {(item.name || "Articolo").slice(0, 40)}
-                                    {(item.name || "").length > 25 && (
-                                      <span className="fx-tooltip">{item.name}</span>
-                                    )}
                                   </span>
                                 </div>
+                                {(item.name || "").length > 0 && (
+                                  <span className="fx-tooltip-wrap">
+                                    <span className="fx-tooltip">{item.name}</span>
+                                  </span>
+                                )}
                               </td>
                               <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL }}>
                                 {item.size || "—"}
@@ -948,10 +1026,15 @@ export default function DashboardCharts({
                                       </div>
                                     )}
                                   </td>
-                                  <td style={{ overflow: "hidden" }}>
+                                  <td style={{ overflow: "visible", position: "relative" }}>
                                     <div style={{ fontWeight: 500, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                       {item.name || "Articolo"}
                                     </div>
+                                    {(item.name || "").length > 0 && (
+                                      <span className="fx-tooltip-wrap">
+                                        <span className="fx-tooltip">{item.name}</span>
+                                      </span>
+                                    )}
                                   </td>
                                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                                     <span style={{ fontSize: 12, fontWeight: 600, color: AMB }}>{days}gg</span>

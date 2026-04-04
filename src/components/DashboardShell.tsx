@@ -1,15 +1,19 @@
 "use client";
 // src/components/DashboardShell.tsx
-// Client wrapper that combines TopNav + Sidebar + content
 import { useState } from "react";
 import TopNav from "@/components/TopNav";
 import Sidebar from "@/components/Sidebar";
+import MobileTabBar from "@/components/MobileTabBar";
 
 export default function DashboardShell({
   userEmail,
+  firstName,
+  avatarUrl,
   children,
 }: {
   userEmail: string;
+  firstName?: string;
+  avatarUrl?: string | null;
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -24,6 +28,7 @@ export default function DashboardShell({
           max-height: 100dvh;
           overflow: hidden;
           max-width: 100vw;
+          position: relative;
         }
         .shell-body {
           display: flex;
@@ -31,19 +36,29 @@ export default function DashboardShell({
           min-height: 0;
           overflow: hidden;
         }
-        /* shell-main styles in globals.css */
+        /* TopNav hidden on mobile */
+        .shell-topnav { display: flex; }
+        .shell-tabbar  { display: none; }
+        @media (max-width: 860px) {
+          .shell-topnav { display: none; }
+          .shell-tabbar  { display: flex; }
+        }
       `}</style>
 
       <div className="shell">
-        <TopNav
-          userEmail={userEmail}
-          onMenuToggle={() => setDrawerOpen(prev => !prev)}
-        />
+        <div className="shell-topnav" style={{ width: "100%" }}>
+          <TopNav
+            userEmail={userEmail}
+            onMenuToggle={() => setDrawerOpen(prev => !prev)}
+          />
+        </div>
         <div className="shell-body">
-
           <main className="shell-main">
             {children}
           </main>
+        </div>
+        <div className="shell-tabbar" style={{ width: "100%" }}>
+          <MobileTabBar firstName={firstName} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>
       </div>
     </>

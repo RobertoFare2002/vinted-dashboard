@@ -16,6 +16,8 @@ type SaleRow = {
   status?: string | null;
   profile_id?: string | null;
   raw_data?: unknown;
+  item_name?: string | null;
+  buyer_seller?: string | null;
 };
 
 type Props = {
@@ -31,7 +33,8 @@ function fmt(n: number) {
 }
 
 // Expand a sale into individual { amount, cost } entries.
-// For bundles, returns one entry per item using individual sale_price and cost.
+// For bundles with raw_data.items, returns one entry per item.
+// For bundles without item detail (name starts with "Bundle"), skips entirely.
 // For regular sales, returns a single entry.
 function expandSale(s: SaleRow): { amount: number; cost: number }[] {
   try {
@@ -43,6 +46,9 @@ function expandSale(s: SaleRow): { amount: number; cost: number }[] {
       }));
     }
   } catch {}
+  // Skip bundles that don't have per-item detail — their total skews the average
+  const name = (s.item_name || s.buyer_seller || "").trim().toLowerCase();
+  if (/^bundle/.test(name)) return [];
   return [{ amount: Number(s.amount ?? 0), cost: Number(s.cost ?? 0) }];
 }
 
@@ -119,7 +125,7 @@ export default function AvgTicketCard({ sales, selectedProfileId, defaultView = 
 
       <div className="atc-root">
         <div className="atc-header">
-          <span className="atc-label">Ticket medio {isVendita ? "vendita" : "acquisto"}</span>
+          <span className="atc-label">Costo medio {isVendita ? "vendita" : "acquisto"}</span>
           <span className={`atc-badge ${isVendita ? "atc-badge-g" : "atc-badge-a"}`}>
             {isVendita ? "vendite" : "acquisti"}
           </span>
@@ -131,7 +137,7 @@ export default function AvgTicketCard({ sales, selectedProfileId, defaultView = 
               {avg > 0 ? `€${fmt(avg)}` : "—"}
             </div>
             <div className="atc-sub">
-              media per articolo {isVendita ? "venduto" : "acquistato"}
+              costo medio per articolo {isVendita ? "venduto" : "acquistato"}
             </div>
 
             <div className="atc-track">

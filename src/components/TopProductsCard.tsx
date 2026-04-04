@@ -251,22 +251,31 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
         .tpc-title { font-size:13px; font-weight:700; color:${INK}; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
         .tpc-hero { border-radius:12px; padding:12px; margin-bottom:10px; border:0.5px solid transparent; }
         .tpc-hero-row { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-        .tpc-hero-left { display:flex; gap:10px; align-items:flex-start; min-width:0; }
-        .tpc-hero-info { min-width:0; }
+        .tpc-hero-left { display:flex; gap:10px; align-items:flex-start; min-width:0; overflow:visible; }
+        .tpc-hero-info { min-width:0; overflow:visible; position:relative; }
         .tpc-medal { font-size:10px; font-weight:700; margin-bottom:4px; }
-        .tpc-hero-name { font-size:14px; font-weight:700; color:${INK}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .tpc-hero-name { font-size:14px; font-weight:700; color:${INK}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; }
         .tpc-hero-sub { font-size:11px; color:${SL}; margin-top:2px; }
         .tpc-hero-value { font-size:22px; font-weight:800; flex-shrink:0; letter-spacing:-.03em; }
         .tpc-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; }
-        .tpc-row-left { display:flex; align-items:center; gap:10px; min-width:0; }
-        .tpc-row-info { min-width:0; }
-        .tpc-row-medal-name { display:flex; align-items:center; gap:5px; margin-bottom:2px; }
+        .tpc-row-left { display:flex; align-items:center; gap:10px; min-width:0; overflow:visible; }
+        .tpc-row-info { min-width:0; overflow:visible; position:relative; }
+        .tpc-row-medal-name { display:flex; align-items:center; gap:5px; margin-bottom:2px; overflow:visible; position:relative; }
         .tpc-row-name { font-size:12px; font-weight:600; color:${INK}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .tpc-row-sub { font-size:11px; color:${SL}; }
         .tpc-row-value { font-size:13px; font-weight:700; flex-shrink:0; }
         .tpc-divider { height:0.5px; background:${BD}; }
         .tpc-dots { display:flex; justify-content:center; align-items:center; gap:9px; margin-top:14px; }
         .tpc-dot { border-radius:50%; cursor:pointer; border:none; padding:0; transition:all .18s ease; }
+        .tpc-name-wrap { position:absolute; inset:0; display:block; overflow:visible; pointer-events:none; }
+        .tpc-name-wrap .tpc-tip {
+          display:none; position:absolute; left:46px; top:50%; transform:translateY(-50%);
+          background:#ffffff; color:#111111; font-size:12px; font-weight:500;
+          padding:4px 14px; border-radius:999px; white-space:nowrap;
+          z-index:9999; pointer-events:none; border:1px solid rgba(0,0,0,0.2);
+        }
+        .tpc-hero:hover .tpc-name-wrap .tpc-tip,
+        .tpc-row:hover .tpc-name-wrap .tpc-tip { display:block; }
       `}</style>
 
       <div className="tpc-root">
@@ -282,10 +291,11 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
           <div className="tpc-hero-row">
             <div className="tpc-hero-left">
               <Photo url={hero.photoUrl} size={48} />
-              <div className="tpc-hero-info">
+              <div className="tpc-hero-info" style={{ position: "relative", minWidth: 0 }}>
                 <div className="tpc-medal" style={{ color: hero.color }}>{MEDALS[0]} #1</div>
                 <div className="tpc-hero-name">{hero.name}</div>
                 <div className="tpc-hero-sub">acquistato €{fmt(hero.buy)} · venduto €{fmt(hero.sell)}</div>
+                <span className="tpc-name-wrap"><span className="tpc-tip">{hero.name}</span></span>
               </div>
             </div>
             <div className="tpc-hero-value" style={{ color: hero.color }}>{hero.display}</div>
@@ -299,9 +309,10 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
               <div className="tpc-row-left">
                 <Photo url={r2.photoUrl} size={36} />
                 <div className="tpc-row-info">
-                  <div className="tpc-row-medal-name">
+                  <div className="tpc-row-medal-name" style={{ position: "relative" }}>
                     <span style={{ fontSize: 13 }}>{MEDALS[1]}</span>
                     <span className="tpc-row-name">{r2.name}</span>
+                    <span className="tpc-name-wrap"><span className="tpc-tip">{r2.name}</span></span>
                   </div>
                   <div className="tpc-row-sub">acquistato €{fmt(r2.buy)} · venduto €{fmt(r2.sell)}</div>
                 </div>
@@ -318,9 +329,10 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
             <div className="tpc-row-left">
               <Photo url={r3.photoUrl} size={36} />
               <div className="tpc-row-info">
-                <div className="tpc-row-medal-name">
+                <div className="tpc-row-medal-name" style={{ position: "relative" }}>
                   <span style={{ fontSize: 13 }}>{MEDALS[2]}</span>
                   <span className="tpc-row-name">{r3.name}</span>
+                  <span className="tpc-name-wrap"><span className="tpc-tip">{r3.name}</span></span>
                 </div>
                 <div className="tpc-row-sub">acquistato €{fmt(r3.buy)} · venduto €{fmt(r3.sell)}</div>
               </div>
