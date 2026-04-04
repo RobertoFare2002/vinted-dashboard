@@ -149,10 +149,11 @@ html, body {
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  height: 100%;
 }
-.fx-left  { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; }
-.fx-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; }
-.fx-chart { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; }
+.fx-left  { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; height: 100%; }
+.fx-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; height: 100%; }
+.fx-chart { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; height: 100%; }
 
 /* 3 col → 2 col: hide right chart panel */
 @media (max-width: 1200px) {
@@ -169,16 +170,33 @@ html, body {
 /* ── SHELL ── */
 .shell-main {
   flex: 1;
-  padding: 24px 24px 40px;
+  padding: 24px 24px 24px;
   min-width: 0;
-  overflow-x: hidden;
+  min-height: 0;
+  overflow: hidden;
   background: #F5F5F5;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
-@media (max-width: 1280px) { .shell-main { padding: 20px 18px 32px; } }
-@media (max-width: 1060px) { .shell-main { padding: 18px 14px 28px; } }
-@media (max-width: 860px)  { .shell-main { padding: 16px 12px 24px; } }
-@media (max-width: 480px)  { .shell-main { padding: 12px 10px 20px; } }
+/* fx-page-wrap: greeting + grid, fills remaining height */
+.fx-page-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+/* fx-grid-wrap: stretches to fill remaining space after greeting */
+.fx-grid-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+@media (max-width: 1280px) { .shell-main { padding: 18px 18px 18px; } }
+@media (max-width: 1060px) { .shell-main { padding: 16px 14px 16px; } }
+@media (max-width: 860px)  { .shell-main { padding: 14px 12px 14px; } }
+@media (max-width: 480px)  { .shell-main { padding: 12px 10px 12px; } }
 
 /* ── TABLE RESPONSIVE COLUMNS ── */
 .fx-col-hide-md {}

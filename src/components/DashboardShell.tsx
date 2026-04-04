@@ -20,15 +20,16 @@ export default function DashboardShell({
         .shell {
           display: flex;
           flex-direction: column;
-          min-height: 100vh;
-          overflow-x: hidden;
+          height: 100dvh;
+          max-height: 100dvh;
+          overflow: hidden;
           max-width: 100vw;
         }
         .shell-body {
           display: flex;
           flex: 1;
           min-height: 0;
-          overflow-x: hidden;
+          overflow: hidden;
         }
         /* shell-main styles in globals.css */
       `}</style>

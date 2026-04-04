@@ -242,18 +242,19 @@ export default async function DashboardPage({
     : null;
 
   return (
-    <div>
-      <div style={{ marginBottom: 28 }}>
-        <h1 className="greeting-font" style={{ fontSize: "clamp(20px, 2.2vw, 28px)", fontWeight: 700, marginBottom: 6, color: "#111111", letterSpacing: "-.03em" }}>
+    <div className="fx-page-wrap">
+      <div style={{ marginBottom: 8, flexShrink: 0 }}>
+        <h1 className="greeting-font" style={{ fontSize: "clamp(17px, 1.8vw, 26px)", fontWeight: 700, marginBottom: 4, color: "#111111", letterSpacing: "-.03em" }}>
           {greeting}, {firstName} 👋
         </h1>
-        <p style={{ color: "#888888", fontSize: 14 }}>
+        <p style={{ color: "#888888", fontSize: 13 }}>
           {selectedProfileName
             ? <>Stai visualizzando i dati del profilo <strong style={{ color: "#111111" }}>{selectedProfileName}</strong> — <a href="/" style={{ color: "#888888", textDecoration: "underline", cursor: "pointer" }}>mostra tutti</a></>
             : "Tieni sotto controllo le tue vendite e monitora i progressi"
           }
         </p>
       </div>
+      <div className="fx-grid-wrap">
       <DashboardCharts
         selectedProfileId={selectedProfileId ?? null}
         kpi={kpi}
@@ -290,6 +291,7 @@ export default async function DashboardPage({
           potentialPrice: i.template_id_ext ? (templatePriceMap[i.template_id_ext] ?? null) : null,
         }))}
       />
+      </div>
     </div>
   );
 }

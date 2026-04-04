@@ -406,6 +406,22 @@ export default function DashboardCharts({
         .fx-dark-bar {
           height: 3px; border-radius: 2px; margin-top: 12px;
         }
+        .fx-tooltip-wrap {
+          position: relative; display: inline-flex; align-items: center;
+          overflow: hidden; max-width: 100%;
+        }
+        .fx-tooltip-wrap .fx-tooltip {
+          display: none; position: absolute; left: 0; top: calc(100% + 6px);
+          background: #111; color: #fff; font-size: 12px; font-weight: 500;
+          padding: 6px 10px; border-radius: 8px; white-space: nowrap;
+          z-index: 999; pointer-events: none;
+          box-shadow: 0 4px 16px rgba(0,0,0,.18);
+        }
+        .fx-tooltip-wrap .fx-tooltip::before {
+          content: ''; position: absolute; bottom: 100%; left: 14px;
+          border: 5px solid transparent; border-bottom-color: #111;
+        }
+        .fx-tooltip-wrap:hover .fx-tooltip { display: block; }
         .fx-view-slide { animation: fxViewSlide 0.4s cubic-bezier(.22,.68,0,1.2) both; }
         @keyframes fxViewSlide {
           from { opacity: 0; transform: translateX(-16px); }
@@ -421,7 +437,7 @@ export default function DashboardCharts({
           to   { opacity: 1; transform: rotateY(0) translateX(0); }
         }
 
-        /* Elastic stagger per le card destra */
+        /* Elastic stagger per le card destra (laterale) */
         .fx-stagger-0 { animation: fxElastic 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 0ms; }
         .fx-stagger-1 { animation: fxElastic 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 70ms; }
         .fx-stagger-2 { animation: fxElastic 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 140ms; }
@@ -429,6 +445,16 @@ export default function DashboardCharts({
         @keyframes fxElastic {
           from { opacity: 0; transform: translateX(-28px); }
           to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Elastic stagger per le card centrali (verso l'alto) */
+        .fx-up-0 { animation: fxElasticUp 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 0ms; }
+        .fx-up-1 { animation: fxElasticUp 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 80ms; }
+        .fx-up-2 { animation: fxElasticUp 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 160ms; }
+        .fx-up-3 { animation: fxElasticUp 0.5s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 240ms; }
+        @keyframes fxElasticUp {
+          from { opacity: 0; transform: translateY(28px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         @media (max-width: 600px) {
           .fx-4cards { grid-template-columns: 1fr 1fr; }
@@ -555,6 +581,7 @@ export default function DashboardCharts({
           {activeView === "vendite" && (
             <>
               {/* Spotlight */}
+              <div key={`spot-${viewAnimKey}`} className="fx-up-0" style={{ flexShrink: 0 }}>
               <div className="fx-card" style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 11, color: SL, marginBottom: 6 }}>{spot.label}</div>
                 <div style={{ fontSize: 40, fontWeight: 800, color: spot.color, letterSpacing: "-.04em", lineHeight: 1.1 }}>
@@ -585,9 +612,11 @@ export default function DashboardCharts({
                   ))}
                 </div>
               </div>
+              </div>
 
               {/* Tabella Attività Recenti */}
-              <div className="fx-card">
+              <div key={`recenti-${viewAnimKey}`} className="fx-up-1" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <div className="fx-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Attività Recenti</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -597,7 +626,7 @@ export default function DashboardCharts({
                     </div>
                   </div>
                 </div>
-                <div className="fx-recent-scroll" style={{ maxHeight: 480 }}>
+                <div className="fx-recent-scroll" style={{ flex: 1, minHeight: 0 }}>
                   <table className="fx-table">
                     <thead>
                       <tr>
@@ -641,8 +670,11 @@ export default function DashboardCharts({
                                       <ShoppingBag size={14} color={SL} />
                                     </div>
                                   )}
-                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  <span className="fx-tooltip-wrap" style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {(sale.buyer_seller || sale.item_name || "Vendita").slice(0, 40)}
+                                    {(sale.buyer_seller || sale.item_name || "").length > 25 && (
+                                      <span className="fx-tooltip">{sale.buyer_seller || sale.item_name}</span>
+                                    )}
                                   </span>
                                 </div>
                               </td>
@@ -688,6 +720,7 @@ export default function DashboardCharts({
                   </table>
                 </div>
               </div>
+              </div>
             </>
           )}
 
@@ -695,6 +728,7 @@ export default function DashboardCharts({
           {activeView === "magazzino" && (
             <>
               {/* Tabella Stock Magazzino */}
+              <div key={`stock-${viewAnimKey}`} className="fx-up-0">
               <div className="fx-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Stock Magazzino</div>
@@ -745,8 +779,11 @@ export default function DashboardCharts({
                                       <Package size={14} color={SL} />
                                     </div>
                                   )}
-                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  <span className="fx-tooltip-wrap" style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {(item.name || "Articolo").slice(0, 40)}
+                                    {(item.name || "").length > 25 && (
+                                      <span className="fx-tooltip">{item.name}</span>
+                                    )}
                                   </span>
                                 </div>
                               </td>
@@ -789,8 +826,9 @@ export default function DashboardCharts({
                 </div>
               </div>
 
+              </div>
               {/* 3-card row under stock table: 2x prossimamente + ticket medio acquisto */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              <div key={`stock-bottom-${viewAnimKey}`} className="fx-up-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
                 <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -827,7 +865,7 @@ export default function DashboardCharts({
 
           {/* Bottom row: 2x prossimamente + ticket medio */}
           {activeView === "vendite" && (
-            <div key={`bottom-${viewAnimKey}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            <div key={`bottom-${viewAnimKey}`} className="fx-up-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, flexShrink: 0 }}>
               {/* Prossimamente 1 */}
               <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
                 <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -853,7 +891,7 @@ export default function DashboardCharts({
             </div>
           )}
 
-        </div>{/* end fx-right */}
+        </div>
 
         {/* ═══ RIGHT CHART COLUMN ═══ */}
         <div className="fx-chart">
@@ -866,13 +904,12 @@ export default function DashboardCharts({
           ) : (
             <>
               <div key={`magazzino-${viewAnimKey}-0`} className="fx-stagger-0"><ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} /></div>
-              <div key={`magazzino-${viewAnimKey}-1`} className="fx-stagger-1">{/* Clearance */}
               {(() => {
                 const staleList = stockItems
                   .filter(i => i.status === "available" && i.purchased_at && Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60)
                   .sort((a, b) => new Date(a.purchased_at!).getTime() - new Date(b.purchased_at!).getTime());
                 return (
-                  <div className="fx-card">
+                  <div key={`magazzino-${viewAnimKey}-1`} className="fx-stagger-1 fx-card">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                       <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Clearance</div>
                       {staleList.length > 0 && (
@@ -928,12 +965,12 @@ export default function DashboardCharts({
                     )}
                   </div>
                 );
-              })()}</div>
+              })()}
             </>
           )}
         </div>
+      </div>
 
-      </div>{/* end fx-grid */}
     </>
   );
 }
