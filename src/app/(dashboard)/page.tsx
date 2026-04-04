@@ -244,7 +244,7 @@ export default async function DashboardPage({
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6, color: "#111111", letterSpacing: "-.03em" }}>
+        <h1 style={{ fontSize: "clamp(20px, 2.2vw, 28px)", fontWeight: 800, marginBottom: 6, color: "#111111", letterSpacing: "-.03em" }}>
           {greeting}, {firstName} 👋
         </h1>
         <p style={{ color: "#888888", fontSize: 14 }}>

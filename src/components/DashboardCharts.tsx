@@ -1,6 +1,6 @@
 "use client";
 // src/components/DashboardCharts.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -132,6 +132,16 @@ export default function DashboardCharts({
   const [spotlightKey, setSpotlightKey]       = useState<"profit"|"revenue"|"cost"|"pending">("profit");
   const [stockSpotKey, setStockSpotKey]       = useState<"roi"|"costo"|"prezzo"|"bloccato">("roi");
 
+  // Track window width to show/hide chart column content inline
+  // Start with false to avoid hydration mismatch (server doesn't know window width)
+  const [showChartInline, setShowChartInline] = useState<boolean>(false);
+  useEffect(() => {
+    const check = () => setShowChartInline(window.innerWidth <= 1060);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const {
     totalRevenue, totalCost, profit, avgMargin, totalPending,
     closedSales, pendingSales, staleItems, stockCount, totalSales, stockCost,
@@ -182,15 +192,7 @@ export default function DashboardCharts({
   return (
     <>
       <style>{`
-        .fx-grid {
-          display: grid;
-          grid-template-columns: 320px 1fr 360px;
-          gap: 20px;
-          align-items: start;
-        }
-        .fx-chart { display: flex; flex-direction: column; gap: 20px; }
-        .fx-left { display: flex; flex-direction: column; gap: 20px; }
-        .fx-right { display: flex; flex-direction: column; gap: 20px; }
+
         .fx-card {
           background: ${W};
           border: none;
@@ -199,6 +201,7 @@ export default function DashboardCharts({
           padding: 24px;
           position: relative;
           overflow: hidden;
+          min-width: 0;
         }
         .fx-card-green {
           background: #111111;
@@ -273,7 +276,7 @@ export default function DashboardCharts({
         .fx-search-wrap {
           display: flex; align-items: center; gap: 8px;
           padding: 8px 14px; border: 1px solid ${BD};
-          border-radius: 12px; background: ${W}; width: 220px;
+          border-radius: 12px; background: ${W}; min-width: 0; max-width: 220px; flex: 1;
         }
         .fx-search-wrap input {
           border: none; outline: none; font-size: 13px;
@@ -283,7 +286,7 @@ export default function DashboardCharts({
         .fx-search-dark {
           display: flex; align-items: center; gap: 8px;
           padding: 8px 14px; border: 1px solid ${BD};
-          border-radius: 12px; background: ${W}; width: 220px;
+          border-radius: 12px; background: ${W}; min-width: 0; max-width: 220px; flex: 1;
         }
         .fx-search-dark input {
           border: none; outline: none; font-size: 13px;
@@ -301,6 +304,7 @@ export default function DashboardCharts({
           gap: 12px;
         }
         .fx-recent-scroll {
+          overflow-x: auto;
           overflow-y: auto;
           scrollbar-width: thin;
           scrollbar-color: rgba(0,0,0,.08) transparent;
@@ -309,6 +313,7 @@ export default function DashboardCharts({
         .fx-recent-scroll::-webkit-scrollbar-track { background: transparent; }
         .fx-recent-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.08); border-radius: 4px; }
         .fx-dark-scroll {
+          overflow-x: auto;
           overflow-y: auto;
           scrollbar-width: thin;
           scrollbar-color: rgba(0,0,0,.08) transparent;
@@ -343,17 +348,14 @@ export default function DashboardCharts({
         .fx-dark-bar {
           height: 3px; border-radius: 2px; margin-top: 12px;
         }
-        @media (max-width: 1400px) {
-          .fx-grid { grid-template-columns: 340px 1fr; }
-          .fx-chart { display: none; }
-        }
-        @media (max-width: 1100px) {
-          .fx-grid { grid-template-columns: 1fr; }
-          .fx-4cards { grid-template-columns: 1fr 1fr; }
-        }
-        @media (max-width: 700px) {
+        @media (max-width: 600px) {
           .fx-4cards { grid-template-columns: 1fr 1fr; }
           .fx-search-wrap { width: 100%; }
+          .fx-card-value { font-size: 24px; }
+        }
+        @media (max-width: 420px) {
+          .fx-card { padding: 16px; border-radius: 16px; }
+          .fx-card-value { font-size: 20px; }
         }
       `}</style>
 
@@ -555,13 +557,13 @@ export default function DashboardCharts({
                   <table className="fx-table">
                     <thead>
                       <tr>
-                        <th>Data</th>
+                        <th className="fx-col-hide-md">Data</th>
                         <th>Articolo</th>
-                        <th style={{ textAlign: "right" }}>Prezzo d'acquisto</th>
-                        <th style={{ textAlign: "right" }}>Prezzo di vendita</th>
-                        <th style={{ textAlign: "right" }}>Margine %</th>
+                        <th className="fx-col-hide-md" style={{ textAlign: "right" }}>Acquisto</th>
+                        <th style={{ textAlign: "right" }}>Vendita</th>
+                        <th style={{ textAlign: "right" }}>Margine</th>
                         <th>Stato</th>
-                        <th>Profilo</th>
+                        <th className="fx-col-hide-sm">Profilo</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -585,8 +587,8 @@ export default function DashboardCharts({
 
                           return (
                             <tr key={sale.id || i}>
-                              <td style={{ fontSize: 12, color: SL, whiteSpace: "nowrap" }}>{dateStr}</td>
-                              <td>
+                              <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL, whiteSpace: "nowrap" }}>{dateStr}</td>
+                              <td style={{ maxWidth: 0 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                   {photoUrl ? (
                                     <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "none" }} />
@@ -595,12 +597,12 @@ export default function DashboardCharts({
                                       <ShoppingBag size={14} color={SL} />
                                     </div>
                                   )}
-                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>
+                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {(sale.buyer_seller || sale.item_name || "Vendita").slice(0, 40)}
                                   </span>
                                 </div>
                               </td>
-                              <td style={{ textAlign: "right" }}>
+                              <td className="fx-col-hide-md" style={{ textAlign: "right" }}>
                                 <div style={{ fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
                                   {cost > 0 ? `€${fmt(cost)}` : "—"}
                                 </div>
@@ -631,7 +633,7 @@ export default function DashboardCharts({
                                   {sMeta.label}
                                 </span>
                               </td>
-                              <td style={{ fontSize: 12, color: SL }}>
+                              <td className="fx-col-hide-sm" style={{ fontSize: 12, color: SL }}>
                                 {profiles.find((p: any) => p.id === sale.profile_id)?.name ?? "—"}
                               </td>
                             </tr>
@@ -664,8 +666,8 @@ export default function DashboardCharts({
                     <thead>
                       <tr>
                         <th>Articolo</th>
-                        <th>Taglia</th>
-                        <th style={{ textAlign: "right" }}>Costo</th>
+                        <th className="fx-col-hide-md">Taglia</th>
+                        <th className="fx-col-hide-md" style={{ textAlign: "right" }}>Costo</th>
                         <th style={{ textAlign: "right" }}>Prezzo</th>
                         <th style={{ textAlign: "right" }}>Giorni</th>
                       </tr>
@@ -690,7 +692,7 @@ export default function DashboardCharts({
 
                           return (
                             <tr key={item.id || i}>
-                              <td>
+                              <td style={{ maxWidth: 0 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                   {photoUrl ? (
                                     <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "none" }} />
@@ -699,15 +701,15 @@ export default function DashboardCharts({
                                       <Package size={14} color={SL} />
                                     </div>
                                   )}
-                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>
+                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {(item.name || "Articolo").slice(0, 40)}
                                   </span>
                                 </div>
                               </td>
-                              <td style={{ fontSize: 12, color: SL }}>
+                              <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL }}>
                                 {item.size || "—"}
                               </td>
-                              <td style={{ textAlign: "right" }}>
+                              <td className="fx-col-hide-md" style={{ textAlign: "right" }}>
                                 <div style={{ fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
                                   {cost > 0 ? `€${fmt(cost)}` : "—"}
                                 </div>
@@ -825,6 +827,15 @@ export default function DashboardCharts({
                   </>
                 );
               })()}
+            </>
+          )}
+
+          {/* Chart cards shown inline when window is too narrow for 3 columns */}
+          {showChartInline && activeView === "vendite" && (
+            <>
+              <SalesChartCard sales={recentSales} />
+              <ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} />
+              <TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} />
             </>
           )}
 

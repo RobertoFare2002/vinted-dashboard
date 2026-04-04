@@ -21,24 +21,16 @@ export default function DashboardShell({
           display: flex;
           flex-direction: column;
           min-height: 100vh;
+          overflow-x: hidden;
+          max-width: 100vw;
         }
         .shell-body {
           display: flex;
           flex: 1;
           min-height: 0;
-        }
-        .shell-main {
-          flex: 1;
-          padding: 28px 28px 40px;
-          min-width: 0;
           overflow-x: hidden;
-          background: #F5F5F5;
         }
-        @media (max-width: 860px) {
-          .shell-main {
-            padding: 20px 16px 28px;
-          }
-        }
+        /* shell-main styles in globals.css */
       `}</style>
 
       <div className="shell">
