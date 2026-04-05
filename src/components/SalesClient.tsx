@@ -78,7 +78,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
 
   return (
     <>
-      {modal && <SaleModal mode={modal.mode} sale={modal.sale} templates={templates} onClose={() => setModal(null)} />}
+      {modal && <SaleModal mode={modal.mode} sale={modal.sale} templates={templates} profiles={profiles} onClose={() => setModal(null)} />}
 
       {/* Confirm Delete */}
       {confirmDelete && (
