@@ -1,6 +1,6 @@
 "use client";
 // src/components/SalesChartCard.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -129,11 +129,18 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
-export default function SalesChartCard({ sales }: { sales: SaleRow[] }) {
-  const [view,        setView]        = useState<View>("month");
+export type PeriodState = { view: View; monthOffset: number; yearOffset: number };
+
+export default function SalesChartCard({ sales, onPeriodChange }: { sales: SaleRow[]; onPeriodChange?: (p: PeriodState) => void }) {
+  const [view,        setView]        = useState<View>("year");
   const [monthOffset, setMonthOffset] = useState(0);
   const [yearOffset,  setYearOffset]  = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+
+  // Notify parent whenever period changes
+  useEffect(() => {
+    onPeriodChange?.({ view, monthOffset, yearOffset });
+  }, [view, monthOffset, yearOffset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { items, total } = useMemo(
     () => buildData(sales, view, monthOffset, yearOffset),

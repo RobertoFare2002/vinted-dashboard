@@ -18,6 +18,7 @@ type Profile = {
   id: string;
   name: string;
   avatar_url?: string | null;
+  salesCount?: number;
 };
 
 type Props = {
@@ -134,7 +135,7 @@ export default function ProfilesCard({ profiles }: Props) {
         .pc-name {
           font-size: 13px; font-weight: 600; color: ${INK};
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-          flex: 1;
+          display: block;
         }
         .pc-name.selected { color: #6bb800; }
         .pc-selected-badge {
@@ -258,8 +259,24 @@ export default function ProfilesCard({ profiles }: Props) {
                 ) : (
                   <div className="pc-avatar-placeholder">👤</div>
                 )}
-                <span className={`pc-name${isSelected ? " selected" : ""}`}>{p.name}</span>
-                {isSelected && <span className="pc-selected-badge">attivo</span>}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span className={`pc-name${isSelected ? " selected" : ""}`}>{p.name}</span>
+                    {isSelected && <span className="pc-selected-badge">attivo</span>}
+                  </div>
+                  {p.salesCount !== undefined && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                        <path d="M1 1h1.5l1.8 5.5h5l1.2-3.5H4" stroke="#007782" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="5.5" cy="10" r="0.8" fill="#007782"/>
+                        <circle cx="9" cy="10" r="0.8" fill="#007782"/>
+                      </svg>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: "#007782" }}>
+                        {p.salesCount} {p.salesCount === 1 ? "vendita" : "vendite"}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <button
                   className="pc-delete-btn"
                   onClick={e => { e.stopPropagation(); handleDelete(p.id, p.name); }}

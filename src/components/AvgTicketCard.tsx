@@ -125,7 +125,7 @@ export default function AvgTicketCard({ sales, selectedProfileId, defaultView = 
 
       <div className="atc-root">
         <div className="atc-header">
-          <span className="atc-label">Costo medio {isVendita ? "vendita" : "acquisto"}</span>
+          <span className="atc-label">Prezzo medio {isVendita ? "vendita" : "acquisto"}</span>
           <span className={`atc-badge ${isVendita ? "atc-badge-g" : "atc-badge-a"}`}>
             {isVendita ? "vendite" : "acquisti"}
           </span>
@@ -137,7 +137,7 @@ export default function AvgTicketCard({ sales, selectedProfileId, defaultView = 
               {avg > 0 ? `€${fmt(avg)}` : "—"}
             </div>
             <div className="atc-sub">
-              costo medio per articolo {isVendita ? "venduto" : "acquistato"}
+              prezzo medio per articolo {isVendita ? "venduto" : "acquistato"}
             </div>
 
             <div className="atc-track">

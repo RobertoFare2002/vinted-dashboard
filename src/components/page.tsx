@@ -43,8 +43,6 @@ export default async function DashboardPage({
     if (s.profile_id) salesCountByProfile[s.profile_id] = (salesCountByProfile[s.profile_id] ?? 0) + 1;
   }
   const profilesWithCount = profiles.map(p => ({ ...p, salesCount: salesCountByProfile[p.id] ?? 0 }));
-  console.log("[DEBUG] salesCountByProfile:", salesCountByProfile);
-  console.log("[DEBUG] profilesWithCount:", profilesWithCount.map(p => ({ id: p.id, name: p.name, salesCount: p.salesCount })));
 
   // Filtra vendite per profilo selezionato
   const sales = selectedProfileId
@@ -265,12 +263,8 @@ export default async function DashboardPage({
           ytdMargin={ytdMargin}
           ytdRevenue={ytdRevenue}
           allRevenue={allRevenue}
-          allTimeProfit={profit}
-          allTimeMargin={avgMargin}
           profileRevenue={totalRevenue}
           profilePending={totalPending}
-          profileTotalSales={sales.length}
-          profileTotalCost={totalCost}
           stockCount={kpi.stockCount}
           allCost={allCost}
           profiles={profiles}

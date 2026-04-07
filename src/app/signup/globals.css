@@ -178,8 +178,7 @@ html, body {
   padding: 24px 24px 24px;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   background: #F5F5F5;
   box-sizing: border-box;
   display: flex;
@@ -206,18 +205,12 @@ html, body {
 
 /* ── MOBILE LAYOUT (<= 860px) ── */
 @media (max-width: 860px) {
-  /* shell-main: scorre verticalmente su mobile */
+  /* shell-main becomes a scroll container */
   .shell-main {
     padding: 0 !important;
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: #F5F5F5;
-    -webkit-overflow-scrolling: touch;
-    height: auto !important;
-    max-height: none !important;
-    display: block !important;
   }
   /* page wrap stacks vertically, no fixed height */
   .fx-page-wrap {
@@ -247,13 +240,16 @@ html, body {
     height: auto !important;
     overflow: visible !important;
   }
-  /* le card tornano al loro overflow normale */
-  /* (rimossa la regola overflow: visible che allungava la tabella) */
-  /* recent activity: altezza limitata con scroll interno come prima */
+  /* le card che contengono liste scrollabili non devono clippare su mobile */
+  .fx-card { overflow: visible !important; }
+  /* tab bar sizing */
+  .mtb-root {
+    padding: 10px 0 max(16px, env(safe-area-inset-bottom)) !important;
+  }
+  /* recent activity desktop scroll: disabilitato su mobile, la pagina scorre */
   .fx-recent-scroll {
-    max-height: 340px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
   /* hide search bar, title row, date col, acquisto col, profilo col, margine% col on mobile */
   .fx-mobile-hide { display: none !important; }
@@ -281,14 +277,9 @@ html, body {
     display: flex !important;
     flex-direction: column;
     gap: 0;
-    max-height: 420px;
-    overflow-y: auto !important;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
-  /* tab bar sizing */
-  .mtb-root {
-    padding: 10px 0 max(16px, env(safe-area-inset-bottom)) !important;
+    /* nessun max-height né overflow: la pagina scorre tutta intera */
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
 

@@ -1,6 +1,6 @@
 "use client";
 // src/components/DashboardCharts.tsx
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo, useCallback } from "react";
 import { changeSaleStatus } from "@/app/(dashboard)/sales/actions";
 import {
   BarChart, Bar,
@@ -14,7 +14,7 @@ import {
   Package, CreditCard, DollarSign, AlertTriangle
 } from "lucide-react";
 import ProfilesCard from "@/components/ProfilesCard";
-import SalesChartCard from "@/components/SalesChartCard";
+import SalesChartCard, { PeriodState } from "@/components/SalesChartCard";
 import ConversionRateCard from "@/components/ConversionRateCard";
 import TopProductsCard from "@/components/TopProductsCard";
 import AvgTicketCard from "@/components/AvgTicketCard";
@@ -106,7 +106,7 @@ interface Props {
   recentSales?: SaleRow[];
   allSales?: SaleRow[];
   photoMap?: Record<string, string>;
-  profiles?: { id: string; name: string; avatar_url?: string | null }[];
+  profiles?: { id: string; name: string; avatar_url?: string | null; salesCount?: number }[];
   stockItems?: StockItem[];
   selectedProfileId?: string | null;
 }
@@ -134,7 +134,13 @@ function CashFlowInChart({ kpi }: { kpi: Props["kpi"] }) {
   const isNeg     = cfSaldo < 0;
   const fmt = (n: number) => n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
-    <div className="fx-card">
+    <div className="fx-card cfc-root">
+      <style>{`
+        .cfc-root { container-type: inline-size; container-name: cfc; }
+        .cfc-saldo { font-weight: 700; line-height: 1; margin-bottom: 4px; font-size: 40px; }
+        @container cfc (max-width: 240px) { .cfc-saldo { font-size: 28px; } }
+        @container cfc (max-width: 200px) { .cfc-saldo { font-size: 22px; } }
+      `}</style>
       <div style={{ fontSize: 11, color: SL, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }}>
         Cash flow — all time
       </div>
@@ -142,8 +148,8 @@ function CashFlowInChart({ kpi }: { kpi: Props["kpi"] }) {
       <div style={{ height: "0.5px", background: BD, marginBottom: 12 }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
         {/* Sinistra: saldo + rate */}
-        <div>
-          <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1, color: isNeg ? RED : "#6bb800", marginBottom: 4 }}>
+        <div style={{ minWidth: 0 }}>
+          <div className="cfc-saldo" style={{ color: isNeg ? RED : "#6bb800" }}>
             {isNeg ? "−" : "+"}€{Math.abs(Math.round(cfSaldo))}
           </div>
           <div style={{ fontSize: 12, color: SL, marginBottom: 2 }}>saldo netto</div>
@@ -185,13 +191,41 @@ export default function DashboardCharts({
 }: Props) {
   const [searchTerm, setSearchTerm]           = useState("");
   const [statusFilter, setStatusFilter]       = useState<string | null>(null);
+  const [searchOpen, setSearchOpen]           = useState(false);
+  const [stockSearchOpen, setStockSearchOpen] = useState(false);
   const [activeView, setActiveView]           = useState<"vendite" | "magazzino">("vendite");
   const [stockSearch, setStockSearch]         = useState("");
   const [spotlightKey, setSpotlightKey]       = useState<"profit"|"revenue"|"cost"|"pending">("profit");
   const [stockSpotKey, setStockSpotKey]       = useState<"roi"|"costo"|"prezzo"|"bloccato">("roi");
   const [viewAnimKey, setViewAnimKey]         = useState(0);
   const [closingId, setClosingId]             = useState<string | null>(null);
+  const [showPctMargin, setShowPctMargin]     = useState(false);
+  const [searchPillOpen, setSearchPillOpen]   = useState(false);
+  const [stockPillOpen, setStockPillOpen]     = useState(false);
   const [isPending, startTransition]          = useTransition();
+
+  // Shared period state — driven by SalesChartCard month navigator
+  const [period, setPeriod] = useState<PeriodState>({ view: "month", monthOffset: 0, yearOffset: 0 });
+  const handlePeriodChange = useCallback((p: PeriodState) => setPeriod(p), []);
+
+  // Sales filtered by the selected period (uses allSales so past years are included)
+  const periodFilteredSales = useMemo(() => {
+    const now = new Date();
+    return allSales.filter(s => {
+      if (!s.transaction_date) return false;
+      const d = new Date(s.transaction_date);
+      if (period.view === "week") {
+        const diff = (now.getTime() - d.getTime()) / 86400000;
+        return diff >= 0 && diff < 7;
+      }
+      if (period.view === "month") {
+        const target = new Date(now.getFullYear(), now.getMonth() + period.monthOffset, 1);
+        return d.getFullYear() === target.getFullYear() && d.getMonth() === target.getMonth();
+      }
+      // year
+      return d.getFullYear() === now.getFullYear() + period.yearOffset;
+    });
+  }, [allSales, period]);
 
   // Track window width to show/hide chart column content inline
   // Start with false to avoid hydration mismatch (server doesn't know window width)
@@ -214,7 +248,7 @@ export default function DashboardCharts({
 
   const nowTs = Date.now();
 
-  const filteredSales = recentSales.filter(s => {
+  const filteredSales = periodFilteredSales.filter(s => {
     if (statusFilter && s.status !== statusFilter) return false;
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -225,22 +259,34 @@ export default function DashboardCharts({
   });
 
   const filteredStock = stockItems.filter(i => {
+    if (i.status !== "available") return false;
     if (!stockSearch) return true;
     return (i.name || "").toLowerCase().includes(stockSearch.toLowerCase());
   });
 
-  // Spotlight — calcolato sui recentSales (già filtrati per profilo)
-  const spotRevenue  = recentSales.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
-  const spotPending  = recentSales.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
-  const spotCost     = recentSales.reduce((a, s) => a + Number(s.cost ?? 0), 0);
-  const spotProfit   = spotRevenue - spotCost;
-  const spotMargin   = spotCost > 0 ? Math.round(((spotRevenue - spotCost) / spotCost) * 100) : 0;
+  // Spotlight — calcolato sulle vendite filtrate per periodo
+  const spotRevenue  = periodFilteredSales.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const spotPending  = periodFilteredSales.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const spotCost     = periodFilteredSales.reduce((a, s) => a + Number(s.cost ?? 0), 0);
+  const spotProfit   = spotRevenue + spotPending - spotCost;
+  const spotMargin   = spotCost > 0 ? Math.round(((spotRevenue + spotPending - spotCost) / spotCost) * 100) : 0;
+
+  const MONTH_NAMES_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+  const periodLabel = (() => {
+    const now = new Date();
+    if (period.view === "week") return "Ultimi 7 giorni";
+    if (period.view === "month") {
+      const d = new Date(now.getFullYear(), now.getMonth() + period.monthOffset, 1);
+      return `${MONTH_NAMES_IT[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    return String(now.getFullYear() + period.yearOffset);
+  })();
 
   const spotlightData = {
-    profit:  { label: "Profitto netto",   value: spotProfit,            sub: `${spotMargin >= 0 ? "+" : ""}${spotMargin}% margine`,  color: spotProfit >= 0 ? "#6bb800" : RED,  subColor: spotProfit >= 0 ? "#6bb800" : RED },
-    revenue: { label: "Ricavi totali",    value: spotRevenue + spotPending, sub: `${recentSales.filter(s=>s.status==="closed").length} chiuse · ${recentSales.filter(s=>s.status==="open").length} aperte`, color: BLU, subColor: BLU },
-    cost:    { label: "Costi acquisti",   value: spotCost,              sub: `${recentSales.length} vendite totali`,                 color: RED,                             subColor: RED },
-    pending: { label: "In sospeso",       value: spotPending,           sub: `${recentSales.filter(s=>s.status==="open").length} vendite aperte`,   color: AMB,                             subColor: AMB },
+    profit:  { label: `Profitto netto · ${periodLabel}`,   value: spotProfit,            sub: `${spotMargin >= 0 ? "+" : ""}${spotMargin}% margine`,  color: spotProfit >= 0 ? "#6bb800" : RED,  subColor: spotProfit >= 0 ? "#6bb800" : RED },
+    revenue: { label: `Ricavi totali · ${periodLabel}`,    value: spotRevenue + spotPending, sub: `${periodFilteredSales.filter(s=>s.status==="closed").length} chiuse · ${periodFilteredSales.filter(s=>s.status==="open").length} aperte`, color: BLU, subColor: BLU },
+    cost:    { label: `Costi acquisti · ${periodLabel}`,   value: spotCost,              sub: `${periodFilteredSales.length} vendite totali`,                 color: RED,                             subColor: RED },
+    pending: { label: `In sospeso · ${periodLabel}`,       value: spotPending,           sub: `${periodFilteredSales.filter(s=>s.status==="open").length} vendite aperte`,                     color: AMB,                             subColor: AMB },
   };
   const spot = spotlightData[spotlightKey];
 
@@ -334,6 +380,61 @@ export default function DashboardCharts({
           width: 7px; height: 7px; border-radius: 50%;
           display: inline-block; margin-right: 6px;
         }
+        /* ── Pill search (desktop) ── */
+        .fx-pill-search {
+          display: flex; align-items: center; gap: 0;
+          height: 32px; border-radius: 999px;
+          border: 0.5px solid ${BD}; background: #F5F5F5;
+          overflow: hidden; cursor: pointer;
+          transition: width .4s cubic-bezier(.4,0,.2,1), background .2s, border-color .2s;
+          width: 32px; padding: 0 9px;
+        }
+        .fx-pill-search.open {
+          width: 220px; background: ${W}; border-color: #007782; cursor: default;
+        }
+        .fx-pill-search input {
+          flex: 1; border: none; outline: none; font-size: 13px;
+          font-family: inherit; background: transparent; color: ${INK};
+          width: 0; opacity: 0; pointer-events: none;
+          transition: opacity .2s .15s; white-space: nowrap;
+        }
+        .fx-pill-search.open input { width: auto; opacity: 1; pointer-events: all; }
+        .fx-pill-close {
+          display: none; align-items: center; justify-content: center;
+          width: 14px; height: 14px; color: ${SL}; cursor: pointer;
+          font-size: 13px; margin-left: 4px; flex-shrink: 0;
+        }
+        .fx-pill-search.open .fx-pill-close { display: flex; }
+        /* ── Pill status badges (table) ── */
+        .fx-pill-open {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+          background: #fff8ec; color: #b36b00; border: 0.5px solid #f5c14c;
+          cursor: pointer; white-space: nowrap;
+        }
+        .fx-pill-done {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+          background: #f0fad0; color: #3b6d11; border: 0.5px solid #a0cc60;
+          cursor: pointer; white-space: nowrap;
+        }
+        .fx-pill-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        /* ── Profile cell in table ── */
+        .fx-prof-cell {
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+        }
+        .fx-prof-avatar {
+          width: 28px; height: 28px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 600; flex-shrink: 0; overflow: hidden;
+        }
+        .fx-prof-name {
+          font-size: 10px; color: ${SL}; text-align: center;
+          line-height: 1.2; word-break: break-all; max-width: 64px;
+        }
+        /* ── Margin toggle header ── */
+        .fx-th-toggle { cursor: pointer; user-select: none; }
+        .fx-th-toggle:hover { color: ${INK}; }
         .fx-search-wrap {
           display: flex; align-items: center; gap: 8px;
           padding: 8px 14px; border: 1px solid ${BD};
@@ -414,11 +515,12 @@ export default function DashboardCharts({
           display: block; overflow: visible; pointer-events: none;
         }
         .fx-tooltip-wrap .fx-tooltip {
-          display: none; position: absolute; left: 40px; bottom: calc(100% + 5px);
-          background: #ffffff; color: #111111; font-size: 12px; font-weight: 500;
-          padding: 4px 14px; border-radius: 999px; white-space: nowrap;
+          display: none; position: absolute; left: 8px; bottom: calc(100% + 5px);
+          background: #ffffff; color: #111111; font-size: 11px; font-weight: 500;
+          padding: 4px 10px; border-radius: 999px; white-space: nowrap;
           z-index: 9999; pointer-events: none;
-          border: 1px solid rgba(0,0,0,0.18);
+          border: 1.5px solid #1a1a1a;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.10);
         }
         td:hover .fx-tooltip-wrap .fx-tooltip { display: block; }
         .fx-view-slide { animation: fxViewSlide 0.4s cubic-bezier(.22,.68,0,1.2) both; }
@@ -457,8 +559,76 @@ export default function DashboardCharts({
         }
         @media (max-width: 600px) {
           .fx-4cards { grid-template-columns: 1fr 1fr; }
-          .fx-search-wrap { width: 100%; }
+          .fx-search-wrap { width: 100%; box-sizing: border-box; }
+          .mobile-view-toggle .fx-search-wrap { width: 100% !important; }
           .fx-card-value { font-size: 24px; }
+
+          /* ── Mobile table: hide header, show rows as cards ── */
+          .fx-table thead { display: none; }
+          .fx-table tbody tr {
+            display: flex;
+            align-items: center;
+            padding: 10px 4px;
+            border-bottom: 1px solid ${BD};
+            gap: 0;
+          }
+          .fx-table tbody tr:last-child { border-bottom: none; }
+          .fx-table tbody tr:hover td { background: transparent; }
+
+          /* hide desktop-only cells on mobile */
+          .fx-table td { display: none !important; padding: 0 !important; border: none !important; }
+
+          /* show only the two mobile cells */
+          .fx-table td.fx-td-main,
+          .fx-table td.fx-td-right { display: flex !important; }
+
+          .fx-td-main {
+            flex: 1;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            max-width: none !important;
+            position: static !important;
+            overflow: hidden;
+          }
+          .fx-td-main-inner {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+          }
+          .fx-td-main-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: ${INK};
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .fx-td-main-sub {
+            font-size: 11px;
+            color: ${SL};
+            margin-top: 2px;
+          }
+          .fx-td-right {
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            flex-shrink: 0;
+            padding-left: 8px !important;
+          }
+          .fx-td-amount {
+            font-size: 14px;
+            font-weight: 700;
+            color: ${INK};
+            font-variant-numeric: tabular-nums;
+          }
+          .fx-status-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 999px;
+          }
         }
         @media (max-width: 420px) {
           .fx-card { padding: 16px; border-radius: 16px; }
@@ -476,7 +646,7 @@ export default function DashboardCharts({
             <div className="fx-card-label">
               <span>{activeView === "magazzino" ? "Articoli in stock" : "Profitto Totale"}</span>
               <span style={{ fontSize: 11, color: SL, display: "flex", alignItems: "center", gap: 4 }}>
-                {activeView === "magazzino" ? <Package size={13} color={BLU} /> : <><span style={{ fontSize: 12 }}>🇮🇹</span> {currentYear}</>}
+                {activeView === "magazzino" ? <Package size={13} color={BLU} /> : <span style={{ fontSize: 11, color: SL }}>All time</span>}
               </span>
             </div>
             <div className="fx-view-fixed">
@@ -492,11 +662,11 @@ export default function DashboardCharts({
                   </>
                 ) : (
                   <>
-                    <div className="fx-card-value" style={{ color: ytdProfit >= 0 ? "#6bb800" : RED }}>€{fmt(ytdProfit)}</div>
+                    <div className="fx-card-value" style={{ color: profit >= 0 ? "#6bb800" : RED }}>€{fmt(profit)}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                      <span className={`fx-delta ${ytdMargin >= 0 ? "fx-delta-up" : "fx-delta-down"}`}>
-                        {ytdMargin >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                        {ytdMargin}%
+                      <span className={`fx-delta ${avgMargin >= 0 ? "fx-delta-up" : "fx-delta-down"}`}>
+                        {avgMargin >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                        {avgMargin}%
                       </span>
                       <span className="fx-subtitle">margine sul costo</span>
                     </div>
@@ -641,42 +811,143 @@ export default function DashboardCharts({
 
               {/* Tabella Attività Recenti */}
               <div key={`recenti-${viewAnimKey}`} className="fx-up-1" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-              <div className="fx-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
 
-                <div className="fx-mobile-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Attività Recenti</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div className="fx-search-wrap">
-                      <Search size={15} color="#b0b0b0" />
-                      <input type="text" placeholder="Cerca..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                    </div>
+                {/* Header mobile: fuori dalla card */}
+                <div className="mobile-flex-header" style={{ marginBottom: 14, padding: "0 2px" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-.02em" }}>Attività Recenti</div>
+                  <div
+                    className={`fx-pill-search${searchOpen ? " open" : ""}`}
+                    onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => { const el = document.getElementById("mob-search-input"); if (el) el.focus(); }, 420); } }}
+                  >
+                    <Search size={14} color="#007782" style={{ flexShrink: 0 }} />
+                    <input
+                      id="mob-search-input"
+                      type="text"
+                      placeholder="Cerca nel registro..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <span className="fx-pill-close" onClick={e => { e.stopPropagation(); setSearchOpen(false); setSearchTerm(""); }}>✕</span>
                   </div>
                 </div>
-                <div className="fx-recent-scroll" style={{ flex: 1, minHeight: 0 }}>
+
+              <div className="fx-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+
+                {/* Header desktop: dentro la card */}
+                <div className="mobile-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Attività Recenti</div>
+                  <div
+                    className={`fx-pill-search${searchPillOpen ? " open" : ""}`}
+                    onClick={() => { if (!searchPillOpen) { setSearchPillOpen(true); setTimeout(() => { const el = document.getElementById("dc-search-input"); if (el) el.focus(); }, 420); } }}
+                  >
+                    <Search size={14} color={searchPillOpen ? "#007782" : "#007782"} style={{ flexShrink: 0 }} />
+                    <input
+                      id="dc-search-input"
+                      type="text"
+                      placeholder="Cerca nel registro..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <span className="fx-pill-close" onClick={e => { e.stopPropagation(); setSearchPillOpen(false); setSearchTerm(""); }}>✕</span>
+                  </div>
+                </div>
+                {/* ── MOBILE list (hidden on desktop) ── */}
+                <div className="mobile-view-toggle fx-mobile-list">
+                  {filteredSales.length === 0 ? (
+                    <div style={{ textAlign: "center", color: SL, padding: "32px 12px", fontSize: 13 }}>
+                      {periodFilteredSales.length === 0 ? "Nessuna vendita nel periodo" : "Nessun risultato"}
+                    </div>
+                  ) : filteredSales.map((sale, i) => {
+                    const sMeta = STATUS_META[sale.status || "open"] || STATUS_META.open;
+                    const dateStr = sale.transaction_date
+                      ? new Date(sale.transaction_date).toLocaleDateString("it", { day: "2-digit", month: "2-digit", year: "numeric" })
+                      : "—";
+                    const amount = Number(sale.amount ?? 0);
+                    const cost   = Number(sale.cost ?? 0);
+                    const marginAbs = amount - cost;
+                    const photoUrl = sale.template_id_ext ? photoMap[sale.template_id_ext] : null;
+                    const prof = profiles.find((p: any) => p.id === sale.profile_id);
+                    return (
+                      <div key={sale.id || i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: i < filteredSales.length - 1 ? `1px solid ${BD}` : "none" }}>
+                        {/* Thumbnail */}
+                        {photoUrl ? (
+                          <img src={photoUrl} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: 42, height: 42, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <ShoppingBag size={16} color={SL} />
+                          </div>
+                        )}
+                        {/* Centro: nome + data — prende tutto lo spazio disponibile */}
+                        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
+                            {(sale.buyer_seller || sale.item_name || "Vendita")}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            {prof && (
+                              prof.avatar_url
+                                ? <img src={prof.avatar_url} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                                : <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#007782", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{prof.name.charAt(0).toUpperCase()}</div>
+                            )}
+                            <span style={{ fontSize: 11, color: SL }}>{dateStr}</span>
+                          </div>
+                        </div>
+                        {/* Badge stato — larghezza fissa, sempre allineato */}
+                        <div style={{ flexShrink: 0, display: "flex", justifyContent: "center" }}>
+                          <span
+                            onClick={() => setStatusFilter(statusFilter === (sale.status || "open") ? null : (sale.status || "open"))}
+                            className={sale.status === "closed" ? "fx-pill-done" : "fx-pill-open"}
+                            style={{ fontSize: 10, padding: "3px 9px", opacity: statusFilter && statusFilter !== (sale.status || "open") ? 0.4 : 1, transition: "opacity .15s" }}
+                          >
+                            <span className="fx-pill-dot" style={{ background: sale.status === "closed" ? "#6bb800" : "#f5a623" }} />
+                            {sMeta.label}
+                          </span>
+                        </div>
+                        {/* Destra: prezzo + margine */}
+                        <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: "tabular-nums", letterSpacing: "-.02em" }}>€{fmt(amount)}</div>
+                          {cost > 0 && (
+                            <div
+                              style={{ fontSize: 11, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED, marginTop: 1, cursor: "pointer" }}
+                              onClick={() => setShowPctMargin(v => !v)}
+                            >
+                              {showPctMargin
+                                ? `${marginAbs >= 0 ? "▲" : "▼"} ${cost > 0 ? Math.round(((amount - cost) / cost) * 100) : 0}%`
+                                : `${marginAbs >= 0 ? "+" : ""}€${fmt(marginAbs)}`}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── DESKTOP table (hidden on mobile) ── */}
+                <div className="fx-recent-scroll mobile-hide" style={{ flex: 1, minHeight: 0 }}>
                   <table className="fx-table">
                     <thead>
                       <tr>
-                        <th className="fx-col-hide-md">Data</th>
+                        <th style={{ width: 72 }}>Data</th>
+                        <th style={{ width: 58, textAlign: "center" }}>Profilo</th>
                         <th>Articolo</th>
-                        <th className="fx-col-hide-md" style={{ textAlign: "right" }}>Acquisto</th>
-                        <th style={{ textAlign: "right" }}>Vendita</th>
-                        <th className="fx-mobile-hide" style={{ textAlign: "right" }}>%</th>
-                        <th className="fx-col-hide-md" style={{ textAlign: "right" }}>+/-</th>
-                        <th>Stato</th>
-                        <th style={{ width: 44, textAlign: "center" }}></th>
-                        <th className="fx-col-hide-sm">Profilo</th>
+                        <th style={{ width: 66 }}>Acquisto</th>
+                        <th style={{ width: 100, textAlign: "center" }}>Stato</th>
+                        <th style={{ width: 84, textAlign: "right", cursor: "pointer", userSelect: "none" }} onClick={() => setShowPctMargin(v => !v)}>
+                          Vendita
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredSales.length === 0 ? (
                         <tr>
-                          <td colSpan={9} style={{ textAlign: "center", color: SL, padding: "32px 12px" }}>
-                            {recentSales.length === 0 ? "Nessuna vendita recente" : "Nessun risultato"}
+                          <td colSpan={8} style={{ textAlign: "center", color: SL, padding: "32px 12px" }}>
+                            {periodFilteredSales.length === 0 ? "Nessuna vendita nel periodo" : "Nessun risultato"}
                           </td>
                         </tr>
                       ) : (
                         filteredSales.map((sale, i) => {
-                          const sMeta = STATUS_META[sale.status || "open"] || STATUS_META.open;
+                          const isOpen = sale.status === "open" || !sale.status;
                           const dateStr = sale.transaction_date
                             ? new Date(sale.transaction_date).toLocaleDateString("it", { day: "2-digit", month: "2-digit", year: "numeric" })
                             : "—";
@@ -685,16 +956,33 @@ export default function DashboardCharts({
                           const marginAbs = amount - cost;
                           const marginPct = cost > 0 ? Math.round(((amount - cost) / cost) * 100) : 0;
                           const photoUrl = sale.template_id_ext ? photoMap[sale.template_id_ext] : null;
-
+                          const prof = profiles.find((p: any) => p.id === sale.profile_id);
+                          const profName = prof?.name ?? "—";
+                          const profInitial = profName.charAt(0).toUpperCase();
+                          const profColors = ["#007782","#9b59b6","#e67e22","#2980b9","#27ae60"];
+                          const profColorIdx = profName.split("").reduce((a: number, c: string) => a + c.charCodeAt(0), 0) % profColors.length;
+                          const profColor = profColors[profColorIdx];
                           return (
                             <tr key={sale.id || i}>
-                              <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL, whiteSpace: "nowrap" }}>{dateStr}</td>
+                              <td style={{ fontSize: 12, color: SL, whiteSpace: "nowrap" }}>{dateStr}</td>
+                              <td>
+                                <div className="fx-prof-cell">
+                                  {prof?.avatar_url ? (
+                                    <img src={prof.avatar_url} alt="" className="fx-prof-avatar" style={{ objectFit: "cover" }} />
+                                  ) : (
+                                    <div className="fx-prof-avatar" style={{ background: `${profColor}18`, color: profColor }}>
+                                      {profInitial}
+                                    </div>
+                                  )}
+                                  <span className="fx-prof-name">{profName}</span>
+                                </div>
+                              </td>
                               <td style={{ maxWidth: 0, position: "relative" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                   {photoUrl ? (
-                                    <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "none" }} />
+                                    <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
                                   ) : (
-                                    <div style={{ width: 36, height: 36, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "none" }}>
+                                    <div style={{ width: 36, height: 36, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                       <ShoppingBag size={14} color={SL} />
                                     </div>
                                   )}
@@ -702,85 +990,35 @@ export default function DashboardCharts({
                                     {(sale.buyer_seller || sale.item_name || "Vendita").slice(0, 40)}
                                   </span>
                                 </div>
-                                {(sale.buyer_seller || sale.item_name || "").length > 0 && (
-                                  <span className="fx-tooltip-wrap">
-                                    <span className="fx-tooltip">{sale.buyer_seller || sale.item_name}</span>
-                                  </span>
-                                )}
-                              </td>
-                              <td className="fx-col-hide-md" style={{ textAlign: "right" }}>
-                                <div style={{ fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
-                                  {cost > 0 ? `€${fmt(cost)}` : "—"}
-                                </div>
-                              </td>
-                              <td style={{ textAlign: "right" }}>
-                                <div style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: INK }}>€{fmt(amount)}</div>
-                                <div style={{ fontSize: 11, fontWeight: 600, marginTop: 2, color: marginAbs >= 0 ? "#6bb800" : RED, fontVariantNumeric: "tabular-nums" }}>
-                                  {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
-                                </div>
-                              </td>
-                              <td className="fx-mobile-hide" style={{ textAlign: "right" }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: marginPct >= 0 ? "#6bb800" : RED }}>
-                                  {marginPct >= 0 ? "▲" : "▼"} {Math.abs(marginPct)}%
+                                <span className="fx-tooltip-wrap">
+                                  <span className="fx-tooltip">{sale.buyer_seller || sale.item_name || "Vendita"}</span>
                                 </span>
                               </td>
-                              <td className="fx-col-hide-md" style={{ textAlign: "right" }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED }}>
-                                  {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
-                                </span>
+                              <td style={{ fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
+                                {cost > 0 ? `€${fmt(cost)}` : "—"}
                               </td>
                               <td>
                                 <span
+                                  className={isOpen ? "fx-pill-open" : "fx-pill-done"}
+                                  style={{ opacity: statusFilter && statusFilter !== (sale.status || "open") ? 0.4 : 1, transition: "opacity .15s" }}
                                   onClick={() => setStatusFilter(statusFilter === (sale.status || "open") ? null : (sale.status || "open"))}
-                                  style={{
-                                    display: "inline-flex", alignItems: "center", gap: 5,
-                                    fontSize: 11, fontWeight: 600, cursor: "pointer",
-                                    color: sMeta.color,
-                                    transition: "opacity .15s",
-                                    opacity: statusFilter && statusFilter !== (sale.status || "open") ? .4 : 1,
-                                  }}
                                 >
-                                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: sMeta.color, display: "inline-block", flexShrink: 0 }} />
-                                  {sMeta.label}
+                                  <span className="fx-pill-dot" style={{ background: isOpen ? "#f5a623" : "#6bb800" }} />
+                                  {isOpen ? "In sospeso" : "Completato"}
                                 </span>
                               </td>
-                              <td style={{ textAlign: "center", width: 44 }}>
-                                {(sale.status === "open" || !sale.status) && sale.id && (
-                                  <button
-                                    disabled={closingId === sale.id}
-                                    onClick={() => {
-                                      setClosingId(sale.id!);
-                                      startTransition(async () => {
-                                        try {
-                                          await changeSaleStatus(sale.id!, "closed");
-                                        } finally {
-                                          setClosingId(null);
-                                        }
-                                      });
-                                    }}
-                                    style={{
-                                      padding: "4px", borderRadius: 999,
-                                      border: "1.5px dashed #6bb800",
-                                      background: closingId === sale.id ? "#EAF3DE" : W,
-                                      cursor: closingId === sale.id ? "not-allowed" : "pointer",
-                                      transition: "all .15s",
-                                      opacity: closingId === sale.id ? .6 : 1,
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      width: 24, height: 24,
-                                    }}
-                                  >
-                                    {closingId === sale.id
-                                      ? <span style={{ fontSize: 10, color: "#3B6D11" }}>...</span>
-                                      : <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 6.5L9 1.5" stroke="#3B6D11" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                    }
-                                  </button>
-                                )}
+                              <td style={{ textAlign: "right" }}>
+                                <div style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: INK }}>€{fmt(amount)}</div>
+                                <div
+                                  style={{ fontSize: 11, fontWeight: 600, marginTop: 2, color: marginAbs >= 0 ? "#6bb800" : RED, fontVariantNumeric: "tabular-nums", cursor: "pointer" }}
+                                  onClick={() => setShowPctMargin(v => !v)}
+                                >
+                                  {showPctMargin
+                                    ? `${marginPct >= 0 ? "▲" : "▼"} ${Math.abs(marginPct)}%`
+                                    : `${marginAbs >= 0 ? "+" : ""}€${fmt(marginAbs)}`}
+                                </div>
                               </td>
-                              <td className="fx-col-hide-sm" style={{ fontSize: 12, color: SL }}>
-                                {profiles.find((p: any) => p.id === sale.profile_id)?.name ?? "—"}
-                              </td>
+
                             </tr>
                           );
                         })
@@ -798,17 +1036,103 @@ export default function DashboardCharts({
             <>
               {/* Tabella Stock Magazzino */}
               <div key={`stock-${viewAnimKey}`} className="fx-up-0">
-              <div className="fx-card">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Stock Magazzino</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div className="fx-search-wrap">
-                      <Search size={15} color="#b0b0b0" />
-                      <input type="text" placeholder="Cerca articolo..." value={stockSearch} onChange={e => setStockSearch(e.target.value)} />
-                    </div>
+
+                {/* Header mobile: fuori dalla card */}
+                <div className="mobile-flex-header" style={{ marginBottom: 14, padding: "0 2px" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-.02em" }}>Stock Magazzino</div>
+                  <div
+                    className={`fx-pill-search${stockSearchOpen ? " open" : ""}`}
+                    onClick={() => { if (!stockSearchOpen) { setStockSearchOpen(true); setTimeout(() => { const el = document.getElementById("mob-stock-input"); if (el) el.focus(); }, 420); } }}
+                  >
+                    <Search size={14} color="#007782" style={{ flexShrink: 0 }} />
+                    <input
+                      id="mob-stock-input"
+                      type="text"
+                      placeholder="Cerca nel magazzino..."
+                      value={stockSearch}
+                      onChange={e => setStockSearch(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <span className="fx-pill-close" onClick={e => { e.stopPropagation(); setStockSearchOpen(false); setStockSearch(""); }}>✕</span>
                   </div>
                 </div>
-                <div className="fx-recent-scroll" style={{ maxHeight: 480 }}>
+
+              <div className="fx-card">
+                {/* Header desktop: dentro la card */}
+                <div className="mobile-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Stock Magazzino</div>
+                  <div
+                    className={`fx-pill-search${stockPillOpen ? " open" : ""}`}
+                    onClick={() => { if (!stockPillOpen) { setStockPillOpen(true); setTimeout(() => { const el = document.getElementById("dc-stock-input"); if (el) el.focus(); }, 420); } }}
+                  >
+                    <Search size={14} color="#007782" style={{ flexShrink: 0 }} />
+                    <input
+                      id="dc-stock-input"
+                      type="text"
+                      placeholder="Cerca articolo..."
+                      value={stockSearch}
+                      onChange={e => setStockSearch(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <span className="fx-pill-close" onClick={e => { e.stopPropagation(); setStockPillOpen(false); setStockSearch(""); }}>✕</span>
+                  </div>
+                </div>
+                {/* ── MOBILE stock list ── */}
+                <div className="mobile-view-toggle fx-mobile-list">
+                  {filteredStock.length === 0 ? (
+                    <div style={{ textAlign: "center", color: SL, padding: "32px 12px", fontSize: 13 }}>Nessun articolo trovato</div>
+                  ) : filteredStock.map((item, i) => {
+                    const photoUrl = item.template_id_ext ? photoMap[item.template_id_ext] : null;
+                    const cost = Number(item.purchase_price ?? 0);
+                    const price = Number(item.potentialPrice ?? 0);
+                    const marginAbs = price - cost;
+                    const days = item.purchased_at ? Math.floor((Date.now() - new Date(item.purchased_at).getTime()) / 86400000) : null;
+                    const isStale = days !== null && days > 60;
+                    return (
+                      <div key={item.id || i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < filteredStock.length - 1 ? `1px solid ${BD}` : "none" }}>
+                        {photoUrl ? (
+                          <img src={photoUrl} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: 42, height: 42, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Package size={16} color={SL} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
+                            {item.name || "Articolo"}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {item.size && <span style={{ fontSize: 11, color: SL }}>{item.size}</span>}
+                            {item.size && days !== null && <span style={{ fontSize: 11, color: SL }}>·</span>}
+                            {days !== null && (
+                              <span style={{ fontSize: 11, color: isStale ? AMB : SL, display: "flex", alignItems: "center", gap: 3 }}>
+                                {isStale && <AlertTriangle size={10} />}{days}gg
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: "tabular-nums", letterSpacing: "-.02em" }}>
+                            {price > 0 ? `€${fmt(price)}` : "—"}
+                          </div>
+                          {price > 0 && cost > 0 && (
+                            <div style={{ fontSize: 11, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED, marginTop: 2 }}>
+                              {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
+                            </div>
+                          )}
+                          {isStale && (
+                            <span style={{ fontSize: 10, fontWeight: 600, color: AMB, background: "#fef3c7", padding: "2px 7px", borderRadius: 999, marginTop: 3, display: "inline-block" }}>
+                              clearance
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── DESKTOP stock table ── */}
+                <div className="fx-recent-scroll mobile-hide" style={{ maxHeight: 480 }}>
                   <table className="fx-table" style={{ tableLayout: "fixed", width: "100%" }}>
                     <colgroup>
                       <col style={{ width: "35%" }} />
@@ -820,10 +1144,10 @@ export default function DashboardCharts({
                     <thead>
                       <tr>
                         <th>Articolo</th>
-                        <th className="fx-col-hide-md">Taglia</th>
-                        <th className="fx-col-hide-md" style={{ textAlign: "right" }}>Costo</th>
-                        <th style={{ textAlign: "right" }}>Prezzo</th>
-                        <th style={{ textAlign: "right" }}>Giorni</th>
+                        <th className="fx-col-hide-md" style={{ textAlign: "center" }}>Taglia</th>
+                        <th className="fx-col-hide-md" style={{ textAlign: "center" }}>Costo</th>
+                        <th style={{ textAlign: "center" }}>Prezzo</th>
+                        <th style={{ textAlign: "center" }}>Giorni</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -846,8 +1170,8 @@ export default function DashboardCharts({
 
                           return (
                             <tr key={item.id || i}>
-                              <td style={{ maxWidth: 0, position: "relative" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <td className="fx-td-main" style={{ maxWidth: 0, position: "relative" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
                                   {photoUrl ? (
                                     <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "none" }} />
                                   ) : (
@@ -855,25 +1179,25 @@ export default function DashboardCharts({
                                       <Package size={14} color={SL} />
                                     </div>
                                   )}
-                                  <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0, display: "block" }}>
-                                    {(item.name || "Articolo").slice(0, 40)}
-                                  </span>
+                                  <div className="fx-td-main-inner">
+                                    <span className="fx-td-main-name">
+                                      {(item.name || "Articolo").slice(0, 40)}
+                                    </span>
+                                  </div>
                                 </div>
-                                {(item.name || "").length > 0 && (
-                                  <span className="fx-tooltip-wrap">
-                                    <span className="fx-tooltip">{item.name}</span>
-                                  </span>
-                                )}
+                                <span className="fx-tooltip-wrap">
+                                  <span className="fx-tooltip">{item.name || "Articolo"}</span>
+                                </span>
                               </td>
-                              <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL }}>
+                              <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL, textAlign: "center" }}>
                                 {item.size || "—"}
                               </td>
-                              <td className="fx-col-hide-md" style={{ textAlign: "right" }}>
+                              <td className="fx-col-hide-md" style={{ textAlign: "center" }}>
                                 <div style={{ fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
                                   {cost > 0 ? `€${fmt(cost)}` : "—"}
                                 </div>
                               </td>
-                              <td style={{ textAlign: "right" }}>
+                              <td style={{ textAlign: "center" }}>
                                 <div style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: INK }}>
                                   {price > 0 ? `€${fmt(price)}` : "—"}
                                 </div>
@@ -883,17 +1207,19 @@ export default function DashboardCharts({
                                   </div>
                                 )}
                               </td>
-                              <td style={{ textAlign: "right" }}>
-                                {days !== null ? (
+                              <td style={{ textAlign: "center" }}>
+                                {days !== null && (
                                   <span style={{
-                                    fontSize: 12, fontWeight: 600,
+                                    fontSize: 10, fontWeight: 600,
+                                    padding: "2px 8px", borderRadius: 999,
+                                    background: isStale ? "#fef3c7" : LT,
                                     color: isStale ? AMB : SL,
-                                    display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 3
+                                    display: "inline-flex", alignItems: "center", gap: 3,
                                   }}>
-                                    {isStale && <AlertTriangle size={11} />}
+                                    {isStale && <AlertTriangle size={9} />}
                                     {days}gg
                                   </span>
-                                ) : <span style={{ color: SL }}>—</span>}
+                                )}
                               </td>
                             </tr>
                           );
@@ -905,67 +1231,47 @@ export default function DashboardCharts({
               </div>
 
               </div>
-              {/* 3-card row under stock table: 2x prossimamente + ticket medio acquisto */}
-              <div key={`stock-bottom-${viewAnimKey}`} className="fx-up-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-                <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: INK }}>Prossimamente</div>
-                  <div style={{ fontSize: 11, color: SL, textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-                </div>
-                <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: INK }}>Prossimamente</div>
-                  <div style={{ fontSize: 11, color: SL, textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-                </div>
-                <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} defaultView="acquisto" />
-              </div>
+
             </>
           )}
 
-          {/* Chart cards shown inline when window is too narrow for 3 columns */}
-          {showChartInline && activeView === "vendite" && (
-            <>
-              <div key={`iv-${viewAnimKey}-0`} className="fx-stagger-0"><SalesChartCard sales={recentSales} /></div>
-              <div key={`iv-${viewAnimKey}-1`} className="fx-stagger-1"><TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} selectedProfileId={selectedProfileId} /></div>
-            </>
-          )}
-          {showChartInline && activeView === "magazzino" && (
-            <div key={`im-${viewAnimKey}-0`} className="fx-stagger-0"><ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} /></div>
-          )}
-
-          {/* Bottom row: 2x prossimamente + ticket medio */}
+          {/* 3 card sotto attività recenti — desktop only */}
           {activeView === "vendite" && (
-            <div key={`bottom-${viewAnimKey}`} className="fx-up-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, flexShrink: 0 }}>
-              {/* Prossimamente 1 */}
-              <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-              </div>
-              {/* Prossimamente 2 */}
-              <div className="fx-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120, gap: 8 }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-              </div>
-              {/* Ticket Medio */}
+            <div className="mobile-hide" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
               <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} />
+              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+              </div>
+              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+              </div>
+            </div>
+          )}
+          {activeView === "magazzino" && (
+            <div className="mobile-hide" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+              <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} defaultView="acquisto" />
+              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+              </div>
+              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+              </div>
             </div>
           )}
 
@@ -975,7 +1281,7 @@ export default function DashboardCharts({
         <div className="fx-chart">
           {activeView === "vendite" ? (
             <>
-              <div key={`vendite-${viewAnimKey}-0`} className="fx-stagger-0"><SalesChartCard sales={recentSales} /></div>
+              <div key={`vendite-${viewAnimKey}-0`} className="fx-stagger-0"><SalesChartCard sales={allSales} onPeriodChange={handlePeriodChange} /></div>
               <div key={`vendite-${viewAnimKey}-1`} className="fx-stagger-1"><CashFlowInChart kpi={kpi} /></div>
               <div key={`vendite-${viewAnimKey}-2`} className="fx-stagger-2"><TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} selectedProfileId={selectedProfileId} /></div>
             </>

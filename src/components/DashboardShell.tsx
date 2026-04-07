@@ -41,7 +41,15 @@ export default function DashboardShell({
         .shell-tabbar  { display: none; }
         @media (max-width: 860px) {
           .shell-topnav { display: none; }
-          .shell-tabbar  { display: flex; }
+          /* shell rimane flex column a 100dvh — è corretto */
+          /* shell-body prende tutto lo spazio tra top e tab bar */
+          .shell-body {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+          }
+          /* shell-main è lo UNICO scroll container */
+          .shell-tabbar { display: flex; flex-shrink: 0; }
         }
       `}</style>
 
