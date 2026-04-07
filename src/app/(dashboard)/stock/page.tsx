@@ -134,19 +134,17 @@ export default async function StockPage() {
     }
   }
 
-  const available = items.filter(i => i.status === "available").length;
-  const reserved  = items.filter(i => i.status === "reserved").length;
-  const sold      = items.filter(i => i.status === "sold").length;
+  const availableItems = items.filter(i => i.status === "available");
 
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "#111111", letterSpacing: "-.03em" }}>Magazzino</h1>
         <p style={{ color: "#888888", fontSize: 13, margin: 0 }}>
-          {available} disponibili · {reserved} in sospeso · {sold} venduti · {items.length} totali
+          {availableItems.length} articoli disponibili
         </p>
       </div>
-      <StockClient initialItems={items} photoMap={photoMap} profileMap={profileMap} profiles={profiles} />
+      <StockClient initialItems={availableItems} photoMap={photoMap} profileMap={profileMap} profiles={profiles} />
     </div>
   );
 }
