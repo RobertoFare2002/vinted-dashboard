@@ -66,8 +66,8 @@ export default async function StockPage() {
   // 1. Collegamento diretto:  sale.raw_data.stock_id === stock.id
   //    (vendite create dal nuovo flusso "Vendi" dal magazzino)
   // 2. Collegamento template: sale.template_id_ext === stock.template_id_ext
-  //    (vendite vecchie sincronizzate dall'estensione, senza stock_id)
-  //    In questo caso prendiamo la vendita più recente per quel template.
+  //    (vendite sincronizzate dall'estensione, senza stock_id)
+  //    "sold" vince sempre su "reserved"
 
   // Mappa 1: stock_id diretto → stato atteso
   const byStockId: Record<string, string> = {};
@@ -75,20 +75,21 @@ export default async function StockPage() {
     const stockId = sale.raw_data?.stock_id;
     if (!stockId || !sale.status) continue;
     const expected = SALE_TO_STOCK[sale.status];
-    if (expected) byStockId[stockId] = expected;
+    if (!expected) continue;
+    // "sold" vince sempre su "reserved"
+    if (byStockId[stockId] === "sold") continue;
+    byStockId[stockId] = expected;
   }
 
-  // Mappa 2: template_id_ext → stato atteso (vendita più recente vince)
-  // Usiamo solo vendite open — non vogliamo marcare come sold articoli
-  // che potrebbero essere diversi pezzi dello stesso template
+  // Mappa 2: template_id_ext → stato atteso
+  // "sold" (closed) vince sempre su "reserved" (open)
   const byTemplateId: Record<string, string> = {};
   for (const sale of sales) {
     if (!sale.template_id_ext || !sale.status) continue;
     if (sale.raw_data?.stock_id) continue; // già gestito dal collegamento diretto
     const expected = SALE_TO_STOCK[sale.status];
     if (!expected) continue;
-    // Se abbiamo già un "sold" per questo template, non sovrascrivere con "reserved"
-    if (byTemplateId[sale.template_id_ext] === "sold") continue;
+    if (byTemplateId[sale.template_id_ext] === "sold") continue; // sold non si sovrascrive
     byTemplateId[sale.template_id_ext] = expected;
   }
 
@@ -100,8 +101,8 @@ export default async function StockPage() {
     let expected = byStockId[item.id];
 
     // Fallback: collegamento tramite template_id_ext
-    // Solo se l'articolo è "available" — non sovrascrivere stati già corretti
-    if (!expected && item.template_id_ext && item.status === "available") {
+    // Applicato se l'articolo non è già "sold" (non sovrascrivere stati definitivi)
+    if (!expected && item.template_id_ext && item.status !== "sold") {
       expected = byTemplateId[item.template_id_ext];
     }
 
@@ -133,17 +134,19 @@ export default async function StockPage() {
     }
   }
 
-  const availableItems = items.filter(i => i.status === "available");
+  const available = items.filter(i => i.status === "available").length;
+  const reserved  = items.filter(i => i.status === "reserved").length;
+  const sold      = items.filter(i => i.status === "sold").length;
 
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "#111111", letterSpacing: "-.03em" }}>Magazzino</h1>
         <p style={{ color: "#888888", fontSize: 13, margin: 0 }}>
-          {availableItems.length} articoli disponibili
+          {available} disponibili · {reserved} in sospeso · {sold} venduti · {items.length} totali
         </p>
       </div>
-      <StockClient initialItems={availableItems} photoMap={photoMap} profileMap={profileMap} profiles={profiles} />
+      <StockClient initialItems={items} photoMap={photoMap} profileMap={profileMap} profiles={profiles} />
     </div>
   );
 }
