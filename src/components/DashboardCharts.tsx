@@ -337,8 +337,8 @@ export default function DashboardCharts({
   // Track window width to show/hide chart column content inline
   // Attach non-passive touchstart to prevent text selection on long press
   useEffect(() => {
-    const handler = (e: TouchEvent) => { e.preventDefault(); };
-    const opts = { passive: false };
+    const handler: EventListener = (e) => { e.preventDefault(); };
+    const opts: AddEventListenerOptions = { passive: false };
     const refs = [salesListRef.current, stockListRef.current];
     refs.forEach(el => el?.addEventListener("touchstart", handler, opts));
     return () => refs.forEach(el => el?.removeEventListener("touchstart", handler, opts));
