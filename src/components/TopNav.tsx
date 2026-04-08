@@ -32,6 +32,7 @@ export default function TopNav({
   const [dropOpen,     setDropOpen]     = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
+  const [isDark, setIsDark] = useState<boolean>(false);
   const [activeTab,    setActiveTab]    = useState<"profile"|"email"|"password">("profile");
 
   // Profile tab
@@ -90,6 +91,25 @@ export default function TopNav({
       document.body.style.overflow = "";
     }
   }, [settingsOpen]);
+
+  // Dark mode effect — persiste su localStorage e applica classe html
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
+
+  // Al mount, legge localStorage e sincronizza (serve per SSR)
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") setIsDark(true);
+    else if (saved === "light") setIsDark(false);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -214,42 +234,70 @@ export default function TopNav({
   return (
     <>
       <style>{`
+        :root {
+          --tn-bg: #ffffff;
+          --tn-border: #EBEBEB;
+          --tn-ink: #111111;
+          --tn-slate: #888888;
+          --tn-light: #F5F5F5;
+          --tn-hover: #F5F5F5;
+          --tn-drop-bg: #ffffff;
+          --tn-drop-shadow: rgba(0,0,0,.10);
+          --tn-pill-bg: #F0F0F0;
+          --tn-pill-border: #D0D0D0;
+          --tn-modal-bg: #ffffff;
+        }
+        html.dark {
+          --tn-bg: #1c1c1e;
+          --tn-border: rgba(255,255,255,.10);
+          --tn-ink: #f0f0f0;
+          --tn-slate: rgba(255,255,255,.45);
+          --tn-light: #0f0f0f;
+          --tn-hover: rgba(255,255,255,.07);
+          --tn-drop-bg: #1c1c1e;
+          --tn-drop-shadow: rgba(0,0,0,.45);
+          --tn-pill-bg: rgba(255,255,255,.10);
+          --tn-pill-border: rgba(255,255,255,.15);
+          --tn-modal-bg: #1c1c1e;
+        }
         .topnav {
           display: flex; align-items: center;
           padding: 0 24px; height: 64px; width: 100%;
-          background: #ffffff; border-bottom: 1px solid #EBEBEB;
+          background: var(--tn-bg); border-bottom: 1px solid var(--tn-border);
           position: sticky; top: 0; z-index: 50;
+          transition: background .35s, border-color .25s;
         }
         .tn-logo {
           display: flex; align-items: center; gap: 9px;
           margin-right: 28px; text-decoration: none;
-          color: #111111; flex-shrink: 0;
+          color: var(--tn-ink); flex-shrink: 0;
         }
         .tn-mark {
           width: 34px; height: 34px; border-radius: 10px;
-          background: #111111; display: flex; align-items: center; justify-content: center;
+          background: var(--tn-ink); display: flex; align-items: center; justify-content: center;
+          transition: background .35s;
         }
-        .tn-brand { font-size: 16px; font-weight: 800; letter-spacing: -.03em; color: #111111; }
+        .tn-brand { font-size: 16px; font-weight: 800; letter-spacing: -.03em; color: var(--tn-ink); transition: color .25s; }
         .tn-tabs { display: flex; gap: 4px; position: absolute; left: 50%; transform: translateX(-50%); }
         .tn-tab {
           padding: 7px 16px; border-radius: 999px; font-size: 13px;
-          font-weight: 500; color: #888888; cursor: pointer;
+          font-weight: 500; color: var(--tn-slate); cursor: pointer;
           transition: all .18s; border: none; background: transparent;
           font-family: inherit; text-decoration: none; display: inline-flex; align-items: center;
         }
-        .tn-tab:hover { color: #111111; background: #F5F5F5; }
-        .tn-tab-active { background: #111111; color: #ffffff; font-weight: 600; }
-        .tn-tab-active:hover { background: #111111; color: #fff; }
+        .tn-tab:hover { color: var(--tn-ink); background: var(--tn-hover); }
+        .tn-tab-active { background: var(--tn-ink); color: var(--tn-bg); font-weight: 600; transition: background .35s, color .25s; }
+        .tn-tab-active:hover { background: var(--tn-ink); color: var(--tn-bg); }
         .tn-right { display: flex; align-items: center; gap: 4px; position: relative; margin-left: auto; }
         .tn-user {
           display: flex; align-items: center; gap: 8px;
           padding: 4px 12px 4px 4px; border-radius: 999px;
-          border: 1px solid #EBEBEB; margin-left: 8px;
-          cursor: pointer; transition: border-color .15s;
+          border: 1px solid var(--tn-border); margin-left: 8px;
+          cursor: pointer; transition: border-color .15s, background .35s;
           background: transparent; font-family: inherit;
         }
-        .tn-user:hover { border-color: #ccc; }
-        .tn-user.open { border-color: #111111; }
+        .tn-user:hover { border-color: var(--tn-slate); }
+        .tn-user.open { border-color: var(--tn-ink); }
         .tn-avatar {
           width: 32px; height: 32px; border-radius: 50%;
           background: #007782; display: flex; align-items: center; justify-content: center;
@@ -257,39 +305,50 @@ export default function TopNav({
           border: 1.5px solid rgba(0,0,0,.08); overflow: hidden; flex-shrink: 0;
         }
         .tn-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .tn-name { font-size: 12px; font-weight: 600; color: #111111; line-height: 1.2; }
-        .tn-email { font-size: 10px; color: #888888; line-height: 1.2; }
+        .tn-name { font-size: 12px; font-weight: 600; color: var(--tn-ink); line-height: 1.2; transition: color .25s; }
+        .tn-email { font-size: 10px; color: var(--tn-slate); line-height: 1.2; transition: color .25s; }
         .tn-dropdown {
           position: absolute; top: calc(100% + 10px); right: 0;
-          background: #ffffff; border: 1px solid #EBEBEB;
-          border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.10);
+          background: var(--tn-drop-bg); border: 1px solid var(--tn-border);
+          border-radius: 16px; box-shadow: 0 8px 32px var(--tn-drop-shadow);
           min-width: 200px; padding: 6px; z-index: 200;
           animation: tn-fade .15s ease;
+          transition: background .35s, border-color .25s;
         }
         @keyframes tn-fade { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
         .tn-drop-item {
           display: flex; align-items: center; gap: 10px;
           padding: 9px 12px; border-radius: 10px; cursor: pointer;
-          font-size: 13px; font-weight: 500; color: #111111;
+          font-size: 13px; font-weight: 500; color: var(--tn-ink);
           border: none; background: transparent; width: 100%;
-          font-family: inherit; transition: background .12s; text-align: left;
+          font-family: inherit; transition: background .12s, color .25s; text-align: left;
         }
-        .tn-drop-item:hover { background: #F5F5F5; }
+        .tn-drop-item:hover { background: var(--tn-hover); }
         .tn-drop-item.danger { color: #FF4D4D; }
         .tn-drop-item.danger:hover { background: rgba(255,77,77,.06); }
-        .tn-drop-divider { height: 1px; background: #EBEBEB; margin: 4px 0; }
-
-        /* Settings modal */
+        .tn-drop-divider { height: 1px; background: var(--tn-border); margin: 4px 0; transition: background .25s; }
+        .tn-dark-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; }
+        .tn-dark-label { font-size: 13px; font-weight: 500; color: var(--tn-ink); transition: color .25s; }
+        .tn-pill { width: 52px; height: 28px; border-radius: 14px; background: var(--tn-pill-bg); border: 0.5px solid var(--tn-pill-border); cursor: pointer; position: relative; transition: background .3s, border-color .3s; flex-shrink: 0; padding: 0; }
+        .tn-pill.on { background: #111111; border-color: #111111; border-radius: 14px; }
+        .tn-pill-thumb { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; transition: transform .3s cubic-bezier(.4,0,.2,1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .tn-pill.on .tn-pill-thumb { transform: translateX(24px); }
+        .tn-ico-sun { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity .2s; }
+        .tn-ico-moon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity .2s; }
+        .tn-pill:not(.on) .tn-ico-sun { opacity: 1; }
+        .tn-pill:not(.on) .tn-ico-moon { opacity: 0; }
+        .tn-pill.on .tn-ico-sun { opacity: 0; }
+        .tn-pill.on .tn-ico-moon { opacity: 1; }
         .tn-settings-overlay {
           position: fixed; inset: 0; z-index: 9999;
           background: rgba(0,0,0,.35); backdrop-filter: blur(6px);
           display: flex; align-items: center; justify-content: center; padding: 16px;
         }
         .tn-settings-modal {
-          background: #ffffff; border-radius: 20px;
+          background: var(--tn-modal-bg); border-radius: 20px;
           padding: 0; width: 100%; max-width: 460px;
           box-shadow: 0 24px 60px rgba(0,0,0,.14);
-          overflow: hidden;
+          overflow: hidden; transition: background .35s;
         }
         .tn-settings-header {
           display: flex; align-items: center; justify-content: space-between;
@@ -297,17 +356,17 @@ export default function TopNav({
         }
         .tn-settings-tabs {
           display: flex; gap: 4px; padding: 16px 24px 0;
-          border-bottom: 1px solid #EBEBEB;
+          border-bottom: 1px solid var(--tn-border);
         }
         .tn-settings-tab {
           padding: 8px 14px; border-radius: 999px 999px 0 0;
           font-size: 12px; font-weight: 600; cursor: pointer;
           border: none; background: transparent; font-family: inherit;
-          color: #888888; transition: color .15s; border-bottom: 2px solid transparent;
+          color: var(--tn-slate); transition: color .15s; border-bottom: 2px solid transparent;
           margin-bottom: -1px;
         }
-        .tn-settings-tab:hover { color: #111111; }
-        .tn-settings-tab.active { color: #111111; border-bottom-color: #111111; }
+        .tn-settings-tab:hover { color: var(--tn-ink); }
+        .tn-settings-tab.active { color: var(--tn-ink); border-bottom-color: var(--tn-ink); }
         .tn-settings-body { padding: 24px; }
         .tn-avatar-upload {
           display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
@@ -329,7 +388,7 @@ export default function TopNav({
         .tn-hamburger {
           display: none; width: 38px; height: 38px; border-radius: 10px;
           align-items: center; justify-content: center;
-          color: #888888; cursor: pointer; border: none; background: transparent; margin-right: 8px;
+          color: var(--tn-slate); cursor: pointer; border: none; background: transparent; margin-right: 8px;
         }
         @media (max-width: 860px) {
           .tn-tabs { display: none; }
@@ -389,6 +448,32 @@ export default function TopNav({
                 <Sparkles size={15} color="#888888" strokeWidth={1.8} />
                 Scopri le novità
               </button>
+              <div className="tn-drop-divider" />
+              <div className="tn-dark-row">
+                <span className="tn-dark-label">{isDark ? "Dark mode" : "Light mode"}</span>
+                <button className={`tn-pill${isDark ? " on" : ""}`} onClick={() => setIsDark(v => !v)}>
+                  <div className="tn-pill-thumb">
+                    <div className="tn-ico-sun">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="7" r="2.4" fill="#888"/>
+                        <line x1="7" y1="0.5" x2="7" y2="2.2" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="7" y1="11.8" x2="7" y2="13.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="0.5" y1="7" x2="2.2" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="11.8" y1="7" x2="13.5" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="2.4" y1="2.4" x2="3.5" y2="3.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="10.5" y1="10.5" x2="11.6" y2="11.6" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="2.4" y1="11.6" x2="3.5" y2="10.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="10.5" y1="3.5" x2="11.6" y2="2.4" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="tn-ico-moon">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                        <path d="M11 7.8A4.8 4.8 0 016.2 3c0-.3.03-.59.08-.88A4.8 4.8 0 1011 7.8z" fill="#888"/>
+                      </svg>
+                    </div>
+                  </div>
+                </button>
+              </div>
               <div className="tn-drop-divider" />
               <button className="tn-drop-item danger" onClick={handleLogout}>
                 <LogOut size={15} strokeWidth={1.8} />

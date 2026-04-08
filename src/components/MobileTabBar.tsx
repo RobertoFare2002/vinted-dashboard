@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import ChangelogModal from "@/components/ChangelogModal";
 import SettingsModal from "@/components/SettingsModal";
@@ -80,7 +81,25 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
   const [open, setOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [settingsOpen,  setSettingsOpen]  = useState(false);
+  const [isDark, setIsDark] = useState<boolean>(false);
   const menuRef   = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") setIsDark(true);
+    else if (saved === "light") setIsDark(false);
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -102,42 +121,75 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
   return (
     <>
       <style>{`
+        :root {
+          --mtb-bg: #fff;
+          --mtb-border: #ebebeb;
+          --mtb-ink: #111;
+          --mtb-slate: #888;
+          --mtb-hover: #f5f5f5;
+          --mtb-pill-bg: #F0F0F0;
+          --mtb-pill-border: #D0D0D0;
+        }
+        html.dark {
+          --mtb-bg: #1c1c1e;
+          --mtb-border: rgba(255,255,255,.10);
+          --mtb-ink: #f0f0f0;
+          --mtb-slate: rgba(255,255,255,.4);
+          --mtb-hover: rgba(255,255,255,.07);
+          --mtb-pill-bg: rgba(255,255,255,.10);
+          --mtb-pill-border: rgba(255,255,255,.15);
+        }
         .mtb-root {
-          background: #fff; border-top: 0.5px solid #ebebeb;
+          background: var(--mtb-bg); border-top: 0.5px solid var(--mtb-border);
           display: flex; align-items: center;
           padding: 10px 0 max(16px, env(safe-area-inset-bottom));
           flex-shrink: 0; width: 100%; position: relative;
+          transition: background .35s, border-color .25s;
         }
         .mtb-item {
           flex: 1; display: flex; flex-direction: column;
           align-items: center; gap: 3px;
           text-decoration: none; cursor: pointer;
         }
-        .mtb-label { font-size: 10px; font-weight: 500; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; line-height: 1; }
+        .mtb-label { font-size: 10px; font-weight: 500; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; line-height: 1; transition: color .25s; }
         .mtb-label-active { color: #007782; font-weight: 700; }
-        .mtb-label-inactive { color: #aaa; }
+        .mtb-label-inactive { color: var(--mtb-slate); }
         .mtb-menu {
           position: absolute; bottom: calc(100% + 6px); right: 6px;
-          background: #fff; border: 0.5px solid #ebebeb;
+          background: var(--mtb-bg); border: 0.5px solid var(--mtb-border);
           border-radius: 16px; padding: 6px; min-width: 210px;
           box-shadow: 0 -4px 24px rgba(0,0,0,.12); z-index: 9999;
+          transition: background .35s, border-color .25s;
         }
         .mtb-menu-user {
           display: flex; align-items: center; gap: 10px;
-          padding: 10px 10px 12px; border-bottom: 0.5px solid #ebebeb; margin-bottom: 4px;
+          padding: 10px 10px 12px; border-bottom: 0.5px solid var(--mtb-border); margin-bottom: 4px;
         }
-        .mtb-menu-name { font-size: 13px; font-weight: 600; color: #111; }
-        .mtb-menu-email { font-size: 11px; color: #888; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+        .mtb-menu-name { font-size: 13px; font-weight: 600; color: var(--mtb-ink); transition: color .25s; }
+        .mtb-menu-email { font-size: 11px; color: var(--mtb-slate); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; transition: color .25s; }
         .mtb-menu-item {
           display: flex; align-items: center; gap: 10px;
           padding: 11px 12px; border-radius: 10px;
-          font-size: 13px; font-weight: 500; color: #111;
+          font-size: 13px; font-weight: 500; color: var(--mtb-ink);
           cursor: pointer; border: none; background: transparent;
-          font-family: inherit; width: 100%; text-align: left; transition: background .12s;
+          font-family: inherit; width: 100%; text-align: left; transition: background .12s, color .25s;
         }
-        .mtb-menu-item:hover { background: #f5f5f5; }
+        .mtb-menu-item:hover { background: var(--mtb-hover); }
         .mtb-menu-item.danger { color: #E24B4A; }
-        .mtb-divider { height: 0.5px; background: #ebebeb; margin: 4px 0; }
+        html.dark .mtb-menu-item.danger { color: #ff6b6b; }
+        .mtb-divider { height: 0.5px; background: var(--mtb-border); margin: 4px 0; transition: background .25s; }
+        .mtb-dark-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; }
+        .mtb-dark-label { font-size: 13px; font-weight: 500; color: var(--mtb-ink); transition: color .25s; }
+        .mtb-pill { width: 52px; height: 28px; border-radius: 14px; background: var(--mtb-pill-bg); border: 0.5px solid var(--mtb-pill-border); cursor: pointer; position: relative; transition: background .3s, border-color .3s; flex-shrink: 0; padding: 0; }
+        .mtb-pill.on { background: #111111; border-color: #111111; border-radius: 14px; }
+        .mtb-pill-thumb { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; transition: transform .3s cubic-bezier(.4,0,.2,1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .mtb-pill.on .mtb-pill-thumb { transform: translateX(24px); }
+        .mtb-ico-sun { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity .2s; }
+        .mtb-ico-moon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity .2s; }
+        .mtb-pill:not(.on) .mtb-ico-sun { opacity: 1; }
+        .mtb-pill:not(.on) .mtb-ico-moon { opacity: 0; }
+        .mtb-pill.on .mtb-ico-sun { opacity: 0; }
+        .mtb-pill.on .mtb-ico-moon { opacity: 1; }
       `}</style>
 
       <nav className="mtb-root">
@@ -200,13 +252,36 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
               </button>
 
               <button className="mtb-menu-item" onClick={() => { setOpen(false); setChangelogOpen(true); }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
-                  <path d="M12 8v4l3 3"/>
-                </svg>
+                <Sparkles size={15} color="#888888" strokeWidth={1.8} />
                 Scopri le novità
               </button>
 
+              <div className="mtb-divider" />
+              <div className="mtb-dark-row">
+                <span className="mtb-dark-label">{isDark ? "Dark mode" : "Light mode"}</span>
+                <button className={`mtb-pill${isDark ? " on" : ""}`} onClick={() => setIsDark(v => !v)}>
+                  <div className="mtb-pill-thumb">
+                    <div className="mtb-ico-sun">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="7" r="2.4" fill="#888"/>
+                        <line x1="7" y1="0.5" x2="7" y2="2.2" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="7" y1="11.8" x2="7" y2="13.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="0.5" y1="7" x2="2.2" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="11.8" y1="7" x2="13.5" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="2.4" y1="2.4" x2="3.5" y2="3.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="10.5" y1="10.5" x2="11.6" y2="11.6" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="2.4" y1="11.6" x2="3.5" y2="10.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="10.5" y1="3.5" x2="11.6" y2="2.4" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="mtb-ico-moon">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                        <path d="M11 7.8A4.8 4.8 0 016.2 3c0-.3.03-.59.08-.88A4.8 4.8 0 1011 7.8z" fill="#888"/>
+                      </svg>
+                    </div>
+                  </div>
+                </button>
+              </div>
               <div className="mtb-divider" />
 
               <button className="mtb-menu-item danger" onClick={handleLogout}>
