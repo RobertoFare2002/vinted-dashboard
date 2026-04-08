@@ -33,11 +33,31 @@ const RED      = "#FF4D4D";
 const AMB      = "#F5A623";
 const BLU      = "#3b82f6";
 const VIOLET   = "#7c3aed";
-const INK      = "#111111";
-const SL       = "#888888";
-const BD       = "#EBEBEB";
-const LT       = "#F5F5F5";
-const W        = "#ffffff";
+
+/* These are overridden at runtime by useDarkTheme hook */
+const INK_LIGHT = "var(--ink)";
+const SL_LIGHT  = "var(--slate)";
+const BD_LIGHT  = "var(--border)";
+const LT_LIGHT  = "var(--light)";
+const W_LIGHT   = "var(--white)";
+
+const INK_DARK  = "#f0f0f0";
+const SL_DARK   = "rgba(255,255,255,.45)";
+const BD_DARK   = "rgba(255,255,255,.10)";
+const LT_DARK   = "#27272a";
+const W_DARK    = "#1e1e20";
+
+function getDarkVars(dark: boolean) {
+  return {
+    INK: dark ? INK_DARK : INK_LIGHT,
+    SL:  dark ? SL_DARK  : SL_LIGHT,
+    BD:  dark ? BD_DARK  : BD_LIGHT,
+    LT:  dark ? LT_DARK  : LT_LIGHT,
+    W:   dark ? W_DARK   : W_LIGHT,
+  };
+}
+
+
 
 function fmt(n: number) {
   return n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -49,17 +69,22 @@ function fmtShort(n: number) {
 
 function ChartTip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  const tipW = isDark ? "#1e1e20" : "var(--white)";
+  const tipBD = isDark ? "rgba(255,255,255,.12)" : "var(--border)";
+  const tipINK = isDark ? "#f0f0f0" : "var(--ink)";
+  const tipSL = isDark ? "rgba(255,255,255,.45)" : "var(--slate)";
   return (
     <div style={{
-      background: W, border: `1px solid ${BD}`, borderRadius: 12,
-      padding: "10px 14px", boxShadow: "0 8px 32px rgba(0,0,0,.10)", fontSize: 12
+      background: tipW, border: `1px solid ${tipBD}`, borderRadius: 12,
+      padding: "10px 14px", boxShadow: "0 8px 32px rgba(0,0,0,.15)", fontSize: 12
     }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: SL, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: tipSL, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
       {payload.map((p: any, i: number) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
           <span style={{ width: 8, height: 8, borderRadius: 3, background: p.color, flexShrink: 0 }} />
-          <span style={{ color: SL }}>{p.name}</span>
-          <span style={{ fontWeight: 700, color: INK, marginLeft: "auto" }}>€{fmt(Number(p.value))}</span>
+          <span style={{ color: tipSL }}>{p.name}</span>
+          <span style={{ fontWeight: 700, color: tipINK, marginLeft: "auto" }}>€{fmt(Number(p.value))}</span>
         </div>
       ))}
     </div>
@@ -116,21 +141,32 @@ interface Props {
   selectedProfileId?: string | null;
 }
 
-const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  closed:  { label: "Completato", color: "#6bb800",  bg: GREEN_BG },
-  open:    { label: "In sospeso", color: AMB,    bg: "#fef3c7" },
-  pending: { label: "In attesa",  color: BLU,    bg: "#dbeafe" },
+const STATUS_META: Record<string, { label: string; color: string; bg: string; bgDark: string }> = {
+  closed:  { label: "Completato", color: "#6bb800", bg: GREEN_BG,            bgDark: "rgba(107,184,0,.15)" },
+  open:    { label: "In sospeso", color: AMB,       bg: "#fef3c7",           bgDark: "rgba(245,166,35,.15)" },
+  pending: { label: "In attesa",  color: BLU,       bg: "#dbeafe",           bgDark: "rgba(59,130,246,.15)" },
 };
 
-const STOCK_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  available: { label: "Disponibile", color: "#007782", bg: "rgba(0,119,130,0.08)" },
-  reserved:  { label: "Riservato",   color: AMB,       bg: "#fef3c7" },
-  sold:      { label: "Venduto",     color: "#6bb800",  bg: GREEN_BG },
+const STOCK_STATUS_META: Record<string, { label: string; color: string; bg: string; bgDark: string }> = {
+  available: { label: "Disponibile", color: "#007782", bg: "rgba(0,119,130,0.08)", bgDark: "rgba(0,119,130,0.2)" },
+  reserved:  { label: "Riservato",   color: AMB,       bg: "#fef3c7",              bgDark: "rgba(245,166,35,.15)" },
+  sold:      { label: "Venduto",     color: "#6bb800",  bg: GREEN_BG,              bgDark: "rgba(107,184,0,.15)" },
 };
 
 
 // Inline Cash Flow card for fx-chart column
 function CashFlowInChart({ kpi }: { kpi: Props["kpi"] }) {
+  const [dm, setDm] = useState(false);
+  useEffect(() => {
+    const check = () => setDm(document.documentElement.classList.contains("dark"));
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  const cfcINK = dm ? "#f0f0f0" : "var(--ink)";
+  const cfcSL  = dm ? "rgba(255,255,255,.45)" : "var(--slate)";
+  const cfcBD  = dm ? "rgba(255,255,255,.10)" : "var(--border)";
   const { allRevenue, allPending, allCost, stockCost } = kpi;
   const cfEntrate = allRevenue + allPending;
   const cfUscite  = allCost + stockCost;
@@ -141,29 +177,45 @@ function CashFlowInChart({ kpi }: { kpi: Props["kpi"] }) {
   return (
     <div className="fx-card cfc-root">
       <style>{`
+        :root {
+          --dc-bg:    #ffffff;
+          --dc-ink:   #111111;
+          --dc-sl:    #888888;
+          --dc-bd:    #EBEBEB;
+          --dc-lt:    #F5F5F5;
+          --dc-hover: #F5F5F5;
+        }
+        html.dark {
+          --dc-bg:    #1e1e20;
+          --dc-ink:   #f0f0f0;
+          --dc-sl:    rgba(255,255,255,.45);
+          --dc-bd:    rgba(255,255,255,.10);
+          --dc-lt:    #27272a;
+          --dc-hover: rgba(255,255,255,.07);
+        }
         .cfc-root { container-type: inline-size; container-name: cfc; }
         .cfc-saldo { font-weight: 700; line-height: 1; margin-bottom: 4px; font-size: 40px; }
         @container cfc (max-width: 240px) { .cfc-saldo { font-size: 28px; } }
         @container cfc (max-width: 200px) { .cfc-saldo { font-size: 22px; } }
       `}</style>
-      <div style={{ fontSize: 11, color: SL, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }}>
+      <div style={{ fontSize: 11, color: cfcSL, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }}>
         Cash flow — all time
       </div>
 
-      <div style={{ height: "0.5px", background: BD, marginBottom: 12 }} />
+      <div style={{ height: "0.5px", background: cfcBD, marginBottom: 12 }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
         {/* Sinistra: saldo + rate */}
         <div style={{ minWidth: 0 }}>
           <div className="cfc-saldo" style={{ color: isNeg ? RED : "#6bb800" }}>
             {isNeg ? "−" : "+"}€{Math.abs(Math.round(cfSaldo))}
           </div>
-          <div style={{ fontSize: 12, color: SL, marginBottom: 2 }}>saldo netto</div>
-          <div style={{ fontSize: 12, color: SL }}>{cfRate}% recovery rate</div>
+          <div style={{ fontSize: 12, color: cfcSL, marginBottom: 2 }}>saldo netto</div>
+          <div style={{ fontSize: 12, color: cfcSL }}>{cfRate}% recovery rate</div>
         </div>
         {/* Destra: entrate + uscite */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end" }}>
           <div>
-            <div style={{ fontSize: 10, color: SL, marginBottom: 3, textAlign: "right" }}>entrate</div>
+            <div style={{ fontSize: 10, color: cfcSL, marginBottom: 3, textAlign: "right" }}>entrate</div>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -174,7 +226,7 @@ function CashFlowInChart({ kpi }: { kpi: Props["kpi"] }) {
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10, color: SL, marginBottom: 3, textAlign: "right" }}>uscite</div>
+            <div style={{ fontSize: 10, color: cfcSL, marginBottom: 3, textAlign: "right" }}>uscite</div>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#FCEBEB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -218,6 +270,19 @@ export default function DashboardCharts({
   const [modalSell,    setModalSell]    = useState<StockItem | null>(null);
   const [modalBundle,  setModalBundle]  = useState<string | null>(null); // preselected stockId
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const salesListRef  = useRef<HTMLDivElement>(null);
+  const stockListRef  = useRef<HTMLDivElement>(null);
+
+  // Legge il tema dark mode dalla classe html.dark
+  const [darkMode, setDarkMode] = useState(false);
+  useEffect(() => {
+    const check = () => setDarkMode(document.documentElement.classList.contains("dark"));
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  const { INK, SL, BD, LT, W } = getDarkVars(darkMode);
 
   const openCtxMenu = (id: string, type: "sale" | "stock", el: HTMLElement) => {
     const rect = el.getBoundingClientRect();
@@ -270,6 +335,15 @@ export default function DashboardCharts({
   }, [allSales, period]);
 
   // Track window width to show/hide chart column content inline
+  // Attach non-passive touchstart to prevent text selection on long press
+  useEffect(() => {
+    const handler = (e: TouchEvent) => { e.preventDefault(); };
+    const opts = { passive: false };
+    const refs = [salesListRef.current, stockListRef.current];
+    refs.forEach(el => el?.addEventListener("touchstart", handler, opts));
+    return () => refs.forEach(el => el?.removeEventListener("touchstart", handler, opts));
+  }, []);
+
   // Start with false to avoid hydration mismatch (server doesn't know window width)
   const [showChartInline, setShowChartInline] = useState<boolean>(false);
   useEffect(() => {
@@ -348,14 +422,15 @@ export default function DashboardCharts({
       <style>{`
 
         .fx-card {
-          background: ${W};
-          border: none;
+          background: var(--dc-bg);
+          border: 1px solid var(--dc-bd);
           box-shadow: 0 4px 20px rgba(0,0,0,0.06);
           border-radius: 20px;
           padding: 24px;
           position: relative;
           overflow: hidden;
           min-width: 0;
+          transition: background .35s, border-color .25s;
         }
         .fx-card-green {
           background: #111111;
@@ -363,7 +438,7 @@ export default function DashboardCharts({
           color: #fff;
         }
         .fx-card-dark {
-          background: ${W};
+          background: var(--dc-bg);
           border: none;
           border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
           padding: 20px 24px;
@@ -371,24 +446,28 @@ export default function DashboardCharts({
           overflow: hidden;
         }
         .fx-card-label {
-          font-size: 11px; font-weight: 600; color: ${SL};
+          font-size: 11px; font-weight: 600; color: var(--dc-sl);
           margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em;
           display: flex; align-items: center; justify-content: space-between;
+          transition: color .25s;
         }
         .fx-card-green .fx-card-label { color: rgba(255,255,255,.55); }
         .fx-card-value {
           font-size: 32px; font-weight: 800;
           letter-spacing: -.04em; line-height: 1.1;
           margin-bottom: 6px; font-variant-numeric: tabular-nums;
+          color: var(--dc-ink); transition: color .25s;
         }
+        .fx-val-green { color: #6bb800 !important; }
+        .fx-val-red   { color: #FF4D4D !important; }
         .fx-delta {
           display: inline-flex; align-items: center; gap: 3px;
           font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
         }
-        .fx-delta-up   { color: #6bb800; background: ${GREEN_BG}; }
+        .fx-delta-up   { color: #6bb800; background: ${darkMode ? "rgba(107,184,0,.18)" : GREEN_BG}; }
         .fx-delta-down { color: ${RED};   background: rgba(255,77,77,.08); }
         .fx-card-green .fx-delta { color: ${GREEN}; background: rgba(0,119,130,.15); }
-        .fx-subtitle { font-size: 11px; color: ${SL}; margin-top: 2px; }
+        .fx-subtitle { font-size: 11px; color: var(--dc-sl); margin-top: 2px; }
         .fx-card-green .fx-subtitle { color: rgba(255,255,255,.55); }
         .fx-icon-circle {
           width: 36px; height: 36px; border-radius: 10px;
@@ -397,32 +476,32 @@ export default function DashboardCharts({
         .fx-wallets {
           display: grid; grid-template-columns: repeat(3, 1fr);
           gap: 10px; margin-top: 20px; padding-top: 16px;
-          border-top: 1px solid ${BD};
+          border-top: 1px solid var(--dc-bd);
         }
         .fx-wallet-item {
           padding: 10px; border-radius: 12px;
-          border: 1px solid ${BD}; font-size: 11px;
-          background: ${W};
+          border: 1px solid var(--dc-bd); font-size: 11px;
+          background: var(--dc-bg);
         }
         .fx-table { width: 100%; border-collapse: collapse; }
         .fx-table th {
           text-align: left; padding: 10px 12px; font-size: 11px;
-          font-weight: 600; color: ${SL}; border-bottom: 1px solid ${BD};
+          font-weight: 600; color: var(--dc-sl); border-bottom: 1px solid var(--dc-bd);
           text-transform: uppercase; letter-spacing: .05em;
         }
         .fx-table td {
           padding: 14px 12px; font-size: 13px;
-          border-bottom: 1px solid ${BD}; color: ${INK};
+          border-bottom: 1px solid var(--dc-bd); color: var(--dc-ink);
         }
         .fx-table tr:last-child td { border-bottom: none; }
-        .fx-table tr:hover td { background: ${LT}; }
+        .fx-table tr:hover td { background: var(--dc-lt); }
         .fx-table-dark th {
-          color: ${SL}; border-bottom: 1px solid ${BD};
+          color: var(--dc-sl); border-bottom: 1px solid var(--dc-bd);
         }
         .fx-table-dark td {
-          color: ${INK}; border-bottom: 1px solid ${BD};
+          color: var(--dc-ink); border-bottom: 1px solid var(--dc-bd);
         }
-        .fx-table-dark tr:hover td { background: ${LT}; }
+        .fx-table-dark tr:hover td { background: var(--dc-lt); }
         .fx-status-dot {
           width: 7px; height: 7px; border-radius: 50%;
           display: inline-block; margin-right: 6px;
@@ -431,24 +510,24 @@ export default function DashboardCharts({
         .fx-pill-search {
           display: flex; align-items: center; gap: 0;
           height: 32px; border-radius: 999px;
-          border: 0.5px solid ${BD}; background: #F5F5F5;
+          border: 0.5px solid var(--dc-bd); background: #F5F5F5;
           overflow: hidden; cursor: pointer;
           transition: width .4s cubic-bezier(.4,0,.2,1), background .2s, border-color .2s;
           width: 32px; padding: 0 9px;
         }
         .fx-pill-search.open {
-          width: 220px; background: ${W}; border-color: #007782; cursor: default;
+          width: 220px; background: var(--dc-bg); border-color: #007782; cursor: default;
         }
         .fx-pill-search input {
           flex: 1; border: none; outline: none; font-size: 13px;
-          font-family: inherit; background: transparent; color: ${INK};
+          font-family: inherit; background: transparent; color: var(--dc-ink);
           width: 0; opacity: 0; pointer-events: none;
           transition: opacity .2s .15s; white-space: nowrap;
         }
         .fx-pill-search.open input { width: auto; opacity: 1; pointer-events: all; }
         .fx-pill-close {
           display: none; align-items: center; justify-content: center;
-          width: 14px; height: 14px; color: ${SL}; cursor: pointer;
+          width: 14px; height: 14px; color: var(--dc-sl); cursor: pointer;
           font-size: 13px; margin-left: 4px; flex-shrink: 0;
         }
         .fx-pill-search.open .fx-pill-close { display: flex; }
@@ -476,37 +555,37 @@ export default function DashboardCharts({
           font-size: 11px; font-weight: 600; flex-shrink: 0; overflow: hidden;
         }
         .fx-prof-name {
-          font-size: 10px; color: ${SL}; text-align: center;
+          font-size: 10px; color: var(--dc-sl); text-align: center;
           line-height: 1.2; word-break: break-all; max-width: 64px;
         }
         /* ── Margin toggle header ── */
         .fx-th-toggle { cursor: pointer; user-select: none; }
-        .fx-th-toggle:hover { color: ${INK}; }
+        .fx-th-toggle:hover { color: var(--dc-ink); }
         .fx-search-wrap {
           display: flex; align-items: center; gap: 8px;
-          padding: 8px 14px; border: 1px solid ${BD};
-          border-radius: 12px; background: ${W}; min-width: 0; max-width: 220px; flex: 1;
+          padding: 8px 14px; border: 1px solid var(--dc-bd);
+          border-radius: 12px; background: var(--dc-bg); min-width: 0; max-width: 220px; flex: 1;
         }
         .fx-search-wrap input {
           border: none; outline: none; font-size: 13px;
-          font-family: inherit; color: ${INK}; background: transparent; width: 100%;
+          font-family: inherit; color: var(--dc-ink); background: transparent; width: 100%;
         }
         .fx-search-wrap input::placeholder { color: #b0b0b0; }
         .fx-search-dark {
           display: flex; align-items: center; gap: 8px;
-          padding: 8px 14px; border: 1px solid ${BD};
-          border-radius: 12px; background: ${W}; min-width: 0; max-width: 220px; flex: 1;
+          padding: 8px 14px; border: 1px solid var(--dc-bd);
+          border-radius: 12px; background: var(--dc-bg); min-width: 0; max-width: 220px; flex: 1;
         }
         .fx-search-dark input {
           border: none; outline: none; font-size: 13px;
-          font-family: inherit; color: ${INK}; background: transparent; width: 100%;
+          font-family: inherit; color: var(--dc-ink); background: transparent; width: 100%;
         }
         .fx-search-dark input::placeholder { color: #b0b0b0; }
         .fx-filter-btn {
           display: flex; align-items: center; gap: 6px;
-          padding: 8px 16px; border: 1px solid ${BD}; border-radius: 999px;
-          background: ${W}; font-size: 13px; font-weight: 500;
-          color: ${SL}; cursor: pointer; font-family: inherit;
+          padding: 8px 16px; border: 1px solid var(--dc-bd); border-radius: 999px;
+          background: var(--dc-bg); font-size: 13px; font-weight: 500;
+          color: var(--dc-sl); cursor: pointer; font-family: inherit;
         }
         .fx-4cards {
           display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
@@ -537,18 +616,18 @@ export default function DashboardCharts({
           border: none; font-family: inherit; transition: all .18s;
         }
         .fx-tab-active-vendite {
-          background: #111111; color: #fff;
+          background: var(--dc-ink); color: var(--dc-bg);
         }
         .fx-tab-active-magazzino {
-          background: #111111; color: #fff;
+          background: var(--dc-ink); color: var(--dc-bg);
         }
         .fx-tab-active {
-          background: #111111; color: #fff;
+          background: var(--dc-ink); color: var(--dc-bg);
         }
         .fx-tab-inactive {
-          background: ${LT}; color: ${SL}; border: none !important;
+          background: var(--dc-lt); color: var(--dc-sl); border: none !important;
         }
-        .fx-tab-inactive:hover { background: #ebebeb; color: ${INK}; }
+        .fx-tab-inactive:hover { background: var(--dc-lt); color: var(--dc-ink); }
         .fx-stock-filter-pill {
           padding: 4px 14px; border-radius: 999px; font-size: 11px; font-weight: 600;
           cursor: pointer; border: 1px solid transparent; transition: all .15s;
@@ -616,7 +695,7 @@ export default function DashboardCharts({
             display: flex;
             align-items: center;
             padding: 10px 4px;
-            border-bottom: 1px solid ${BD};
+            border-bottom: 1px solid var(--dc-bd);
             gap: 0;
           }
           .fx-table tbody tr:last-child { border-bottom: none; }
@@ -647,14 +726,14 @@ export default function DashboardCharts({
           .fx-td-main-name {
             font-size: 13px;
             font-weight: 600;
-            color: ${INK};
+            color: var(--dc-ink);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
           .fx-td-main-sub {
             font-size: 11px;
-            color: ${SL};
+            color: var(--dc-sl);
             margin-top: 2px;
           }
           .fx-td-right {
@@ -667,7 +746,7 @@ export default function DashboardCharts({
           .fx-td-amount {
             font-size: 14px;
             font-weight: 700;
-            color: ${INK};
+            color: var(--dc-ink);
             font-variant-numeric: tabular-nums;
           }
           .fx-status-badge {
@@ -683,6 +762,11 @@ export default function DashboardCharts({
         }
 
         /* ── Long press context menu ── */
+        .lp-row {
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+          user-select: none;
+        }
         .lp-row-active {
           position: relative;
         }
@@ -714,20 +798,20 @@ export default function DashboardCharts({
         }
         .lp-menu-header {
           padding: 11px 14px 9px;
-          border-bottom: 0.5px solid #EBEBEB;
+          border-bottom: 0.5px solid var(--dc-bd);
         }
-        .lp-menu-name { font-size: 12px; font-weight: 700; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
-        .lp-menu-sub  { font-size: 10px; color: #888; margin-top: 2px; }
+        .lp-menu-name { font-size: 12px; font-weight: 700; color: var(--dc-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .lp-menu-sub  { font-size: 10px; color: var(--dc-sl); margin-top: 2px; }
         .lp-menu-action {
           display: flex; align-items: center; gap: 11px;
-          padding: 12px 14px; border-bottom: 0.5px solid #EBEBEB;
+          padding: 12px 14px; border-bottom: 0.5px solid var(--dc-bd);
           cursor: pointer; background: transparent; border-left: none; border-right: none; border-top: none;
           width: 100%; font-family: inherit; text-align: left;
           transition: background .12s;
         }
         .lp-menu-action:last-child { border-bottom: none; }
-        .lp-menu-action:active { background: #F5F5F5; }
-        .lp-menu-action-label { font-size: 13px; color: #111; font-weight: 500; }
+        .lp-menu-action:active { background: var(--dc-lt); }
+        .lp-menu-action-label { font-size: 13px; color: var(--dc-ink); font-weight: 500; }
         .lp-menu-action-label-danger { font-size: 13px; color: #c0392b; font-weight: 500; }
         .lp-icon { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .lp-icon-green  { background: #f0f9e6; }
@@ -755,14 +839,14 @@ export default function DashboardCharts({
                   <>
                     <div className="fx-card-value" style={{ color: BLU }}>{stockCount}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                      <span className="fx-delta" style={{ color: BLU, background: "#dbeafe" }}>
+                      <span className="fx-delta" style={{ color: BLU, background: darkMode ? "rgba(59,130,246,.18)" : "#dbeafe" }}>
                         <ArrowUpRight size={12} /> {ytdStockCount} quest&apos;anno
                       </span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="fx-card-value" style={{ color: profit >= 0 ? "#6bb800" : RED }}>€{fmt(profit)}</div>
+                    <div className={`fx-card-value ${profit >= 0 ? "fx-val-green" : "fx-val-red"}`}>€{fmt(profit)}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                       <span className={`fx-delta ${avgMargin >= 0 ? "fx-delta-up" : "fx-delta-down"}`}>
                         {avgMargin >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
@@ -848,14 +932,14 @@ export default function DashboardCharts({
 
           {/* Mobile toggle — always visible on mobile, above content */}
           <div className="mobile-view-toggle" style={{ flexShrink: 0 }}>
-            <div style={{ display: "flex", background: "#F0F0F0", borderRadius: 999, padding: 3 }}>
+            <div style={{ display: "flex", background: darkMode ? "rgba(255,255,255,.10)" : "rgba(0,0,0,.07)", borderRadius: 999, padding: 3 }}>
               <button
                 onClick={() => { setActiveView("vendite"); setViewAnimKey(k => k + 1); }}
                 style={{
                   flex: 1, padding: "7px 0", borderRadius: 999, border: "none",
                   fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  background: activeView === "vendite" ? "#111" : "transparent",
-                  color: activeView === "vendite" ? "#fff" : "#888",
+                  background: activeView === "vendite" ? (darkMode ? "#f0f0f0" : "#111") : "transparent",
+                  color: activeView === "vendite" ? (darkMode ? "#111" : "#fff") : (darkMode ? "rgba(255,255,255,.45)" : "rgba(0,0,0,.45)"),
                   transition: "all .18s",
                 }}
               >Vendite</button>
@@ -864,8 +948,8 @@ export default function DashboardCharts({
                 style={{
                   flex: 1, padding: "7px 0", borderRadius: 999, border: "none",
                   fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  background: activeView === "magazzino" ? "#111" : "transparent",
-                  color: activeView === "magazzino" ? "#fff" : "#888",
+                  background: activeView === "magazzino" ? (darkMode ? "#f0f0f0" : "#111") : "transparent",
+                  color: activeView === "magazzino" ? (darkMode ? "#111" : "#fff") : (darkMode ? "rgba(255,255,255,.45)" : "rgba(0,0,0,.45)"),
                   transition: "all .18s",
                 }}
               >Magazzino</button>
@@ -955,7 +1039,7 @@ export default function DashboardCharts({
                 </div>
                 {/* ── MOBILE list (hidden on desktop) ── */}
                 <div className="mobile-view-toggle fx-mobile-list-wrap">
-                <div className="mobile-view-toggle fx-mobile-list">
+                <div ref={salesListRef} className="mobile-view-toggle fx-mobile-list">
                   {filteredSales.length === 0 ? (
                     <div style={{ textAlign: "center", color: SL, padding: "32px 12px", fontSize: 13 }}>
                       {periodFilteredSales.length === 0 ? "Nessuna vendita nel periodo" : "Nessun risultato"}
@@ -977,7 +1061,7 @@ export default function DashboardCharts({
                     return (
                       <div
                         key={sale.id || i}
-                        className={isCtxOpen ? "lp-row-active" : ""}
+                        className={`lp-row${isCtxOpen ? " lp-row-active" : ""}`}
                         style={{ position: "relative", userSelect: "none", touchAction: "pan-y" }}
                         {...makeLongPressHandlers(saleId, "sale")}
                       >
@@ -1200,7 +1284,7 @@ export default function DashboardCharts({
                 </div>
                 {/* ── MOBILE stock list ── */}
                 <div className="mobile-view-toggle fx-mobile-list-wrap">
-                <div className="mobile-view-toggle fx-mobile-list">
+                <div ref={stockListRef} className="mobile-view-toggle fx-mobile-list">
                   {filteredStock.length === 0 ? (
                     <div style={{ textAlign: "center", color: SL, padding: "32px 12px", fontSize: 13 }}>Nessun articolo trovato</div>
                   ) : filteredStock.map((item, i) => {
@@ -1215,7 +1299,7 @@ export default function DashboardCharts({
                     return (
                       <div
                         key={item.id || i}
-                        className={isCtxOpen ? "lp-row-active" : ""}
+                        className={`lp-row${isCtxOpen ? " lp-row-active" : ""}`}
                         style={{ position: "relative", userSelect: "none", touchAction: "pan-y" }}
                         {...makeLongPressHandlers(stockId, "stock")}
                       >
@@ -1254,7 +1338,7 @@ export default function DashboardCharts({
                                   </span>
                                 )}
                                 {isStale && (
-                                  <span style={{ fontSize: 10, fontWeight: 600, color: AMB, background: "#fef3c7", padding: "2px 7px", borderRadius: 999, marginLeft: 2 }}>
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: AMB, background: darkMode ? "rgba(245,166,35,.18)" : "#fef3c7", padding: "2px 7px", borderRadius: 999, marginLeft: 2 }}>
                                     clearance
                                   </span>
                                 )}
@@ -1382,38 +1466,38 @@ export default function DashboardCharts({
           {activeView === "vendite" && (
             <div className="mobile-hide" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
               <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} />
-              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: W, borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
               </div>
-              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: W, borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
               </div>
             </div>
           )}
           {activeView === "magazzino" && (
             <div className="mobile-hide" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
               <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} defaultView="acquisto" />
-              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: W, borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
               </div>
-              <div style={{ background: "#ffffff", borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: W, borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111111" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
+                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
               </div>
             </div>
           )}
