@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ChangelogModal from "@/components/ChangelogModal";
+import SettingsModal from "@/components/SettingsModal";
 
 type TabBarProps = {
   firstName?: string;
@@ -76,6 +78,8 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
   const router    = useRouter();
   const supabase  = createClient();
   const [open, setOpen] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
+  const [settingsOpen,  setSettingsOpen]  = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -187,12 +191,20 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
                 </div>
               </div>
 
-              <button className="mtb-menu-item" onClick={() => { setOpen(false); window.dispatchEvent(new Event("open-settings")); }}>
+              <button className="mtb-menu-item" onClick={() => { setOpen(false); setSettingsOpen(true); }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3"/>
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
                 Impostazioni account
+              </button>
+
+              <button className="mtb-menu-item" onClick={() => { setOpen(false); setChangelogOpen(true); }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                  <path d="M12 8v4l3 3"/>
+                </svg>
+                Scopri le novità
               </button>
 
               <div className="mtb-divider" />
@@ -208,6 +220,8 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
           )}
         </div>
       </nav>
+      {changelogOpen && <ChangelogModal onClose={() => setChangelogOpen(false)} />}
+      {settingsOpen  && <SettingsModal userEmail={userEmail || ""} onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }

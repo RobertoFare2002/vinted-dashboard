@@ -77,13 +77,18 @@ export default function TopNav({
     return () => window.removeEventListener("open-settings", handleMobileSettings);
   }, []);
 
-  // When modal opens, remove overflow:hidden from shell so fixed overlay works
+  // When modal opens, ensure fixed overlay is not clipped by overflow:hidden
   useEffect(() => {
     const shell = document.querySelector(".shell") as HTMLElement | null;
-    if (shell) {
-      shell.style.overflow = settingsOpen ? "visible" : "hidden";
+    if (shell) shell.style.overflow = settingsOpen ? "visible" : "";
+    const html = document.documentElement;
+    if (settingsOpen) {
+      html.style.overflow = "visible";
+      document.body.style.overflow = "visible";
+    } else {
+      html.style.overflow = "";
+      document.body.style.overflow = "";
     }
-    document.body.style.overflow = settingsOpen ? "hidden" : "";
   }, [settingsOpen]);
 
   // Close dropdown on outside click

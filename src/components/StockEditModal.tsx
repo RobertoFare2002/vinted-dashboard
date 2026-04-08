@@ -23,16 +23,17 @@ const S = {
   overlay: {
     position: "fixed" as const, inset: 0, zIndex: 100,
     background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)",
-    display: "flex", alignItems: "flex-end", justifyContent: "center",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    padding: "16px",
   },
   sheet: {
     background: "#ffffff",
     border: "none",
-    borderRadius: "20px 20px 0 0",
-    padding: "20px 18px 32px",
-    width: "100%", maxWidth: 560,
+    borderRadius: "20px",
+    padding: "28px 24px",
+    width: "100%", maxWidth: 520,
     maxHeight: "90vh", overflowY: "auto" as const,
-    boxShadow: "0 -8px 40px rgba(0,0,0,.12)",
+    boxShadow: "0 24px 60px rgba(0,0,0,.14)",
   },
   label: {
     display: "block", fontSize: 11, color: "#888888",
@@ -109,7 +110,6 @@ export default function StockEditModal({ item, thumb, onClose, profiles }: Props
       <div style={S.sheet} onClick={e => e.stopPropagation()}>
 
         {/* Handle bar */}
-        <div style={{ width: 36, height: 4, background: "#EBEBEB", borderRadius: 2, margin: "0 auto 18px" }} />
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>

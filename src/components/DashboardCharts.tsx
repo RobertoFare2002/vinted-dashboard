@@ -1,7 +1,12 @@
 "use client";
 // src/components/DashboardCharts.tsx
-import { useState, useEffect, useTransition, useMemo, useCallback } from "react";
-import { changeSaleStatus } from "@/app/(dashboard)/sales/actions";
+import { useState, useEffect, useTransition, useMemo, useCallback, useRef } from "react";
+import { changeSaleStatus, deleteSale } from "@/app/(dashboard)/sales/actions";
+import { deleteStockItem } from "@/app/(dashboard)/stock/actions";
+import SaleModal from "@/components/SaleModal";
+import StockEditModal from "@/components/StockEditModal";
+import SellModal from "@/components/SellModal";
+import BundleModal from "@/components/BundleModal";
 import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -204,6 +209,42 @@ export default function DashboardCharts({
   const [stockPillOpen, setStockPillOpen]     = useState(false);
   const [isPending, startTransition]          = useTransition();
 
+  // ── Context menu (long press mobile) ──
+  const [ctxMenuId,    setCtxMenuId]    = useState<string | null>(null);
+  const [ctxMenuType,  setCtxMenuType]  = useState<"sale" | "stock" | null>(null);
+  const [ctxPos,       setCtxPos]       = useState<{ top: number; right: number } | null>(null);
+  const [modalSale,    setModalSale]    = useState<SaleRow | null>(null);
+  const [modalStock,   setModalStock]   = useState<StockItem | null>(null);
+  const [modalSell,    setModalSell]    = useState<StockItem | null>(null);
+  const [modalBundle,  setModalBundle]  = useState<string | null>(null); // preselected stockId
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openCtxMenu = (id: string, type: "sale" | "stock", el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    const MENU_H = type === "sale" ? 188 : 216;
+    const TAB_BAR = 80;
+    const spaceBelow = window.innerHeight - rect.bottom - TAB_BAR;
+    const openAbove = spaceBelow < MENU_H && rect.top > MENU_H;
+    const top = openAbove ? rect.top - MENU_H - 6 : rect.bottom + 6;
+    const right = Math.max(8, window.innerWidth - rect.right);
+    setCtxPos({ top, right });
+    setCtxMenuId(id);
+    setCtxMenuType(type);
+    if (navigator.vibrate) navigator.vibrate(40);
+  };
+  const closeCtxMenu = () => { setCtxMenuId(null); setCtxMenuType(null); setCtxPos(null); };
+
+  const makeLongPressHandlers = (id: string, type: "sale" | "stock") => ({
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === "mouse") return;
+      const el = e.currentTarget as HTMLElement;
+      longPressTimer.current = setTimeout(() => openCtxMenu(id, type, el), 500);
+    },
+    onPointerUp:     () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } },
+    onPointerCancel: () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } },
+    onPointerLeave:  () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } },
+  });
+
   // Shared period state — driven by SalesChartCard month navigator
   const [period, setPeriod] = useState<PeriodState>({ view: "month", monthOffset: 0, yearOffset: 0 });
   const handlePeriodChange = useCallback((p: PeriodState) => setPeriod(p), []);
@@ -295,6 +336,11 @@ export default function DashboardCharts({
     profitto: m.profitto,
     costi: m.costi,
   }));
+
+  const ctxSaleData  = ctxMenuType === "sale"  ? filteredSales.find(s => s.id === ctxMenuId) ?? null : null;
+  const ctxStockData = ctxMenuType === "stock" ? filteredStock.find(i => i.id === ctxMenuId) ?? null : null;
+  // For stock context menu we also need allSales data (not just filtered period)
+  const ctxSaleDataAll = ctxMenuType === "sale" ? (ctxSaleData ?? allSales.find(s => s.id === ctxMenuId) ?? null) : null;
 
   return (
     <>
@@ -634,6 +680,59 @@ export default function DashboardCharts({
           .fx-card { padding: 16px; border-radius: 16px; }
           .fx-card-value { font-size: 20px; }
         }
+
+        /* ── Long press context menu ── */
+        .lp-row-active {
+          position: relative;
+        }
+        .lp-row-active .lp-row-inner {
+          background: rgba(0,119,130,0.06);
+          border: 2px solid #ffffff;
+          border-radius: 12px;
+          margin: 4px 0;
+          box-shadow: 0 2px 12px rgba(0,119,130,0.15);
+        }
+        .lp-row-active::before { display: none; }
+        .lp-backdrop {
+          position: fixed; inset: 0; z-index: 40;
+        }
+        .lp-menu {
+          position: fixed;
+          background: #ffffff;
+          border: 0.5px solid rgba(0,0,0,0.12);
+          border-radius: 16px;
+          min-width: 210px;
+          z-index: 9999;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+          animation: lpMenuIn 0.18s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        @keyframes lpMenuIn {
+          from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .lp-menu-header {
+          padding: 11px 14px 9px;
+          border-bottom: 0.5px solid #EBEBEB;
+        }
+        .lp-menu-name { font-size: 12px; font-weight: 700; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .lp-menu-sub  { font-size: 10px; color: #888; margin-top: 2px; }
+        .lp-menu-action {
+          display: flex; align-items: center; gap: 11px;
+          padding: 12px 14px; border-bottom: 0.5px solid #EBEBEB;
+          cursor: pointer; background: transparent; border-left: none; border-right: none; border-top: none;
+          width: 100%; font-family: inherit; text-align: left;
+          transition: background .12s;
+        }
+        .lp-menu-action:last-child { border-bottom: none; }
+        .lp-menu-action:active { background: #F5F5F5; }
+        .lp-menu-action-label { font-size: 13px; color: #111; font-weight: 500; }
+        .lp-menu-action-label-danger { font-size: 13px; color: #c0392b; font-weight: 500; }
+        .lp-icon { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .lp-icon-green  { background: #f0f9e6; }
+        .lp-icon-blue   { background: #e8f0fe; }
+        .lp-icon-red    { background: #fdf0ef; }
+        .lp-icon-amber  { background: #fff8ee; }
       `}</style>
 
       <div className="fx-grid">
@@ -752,7 +851,7 @@ export default function DashboardCharts({
               <button
                 onClick={() => { setActiveView("vendite"); setViewAnimKey(k => k + 1); }}
                 style={{
-                  flex: 1, padding: "9px 0", borderRadius: 999, border: "none",
+                  flex: 1, padding: "7px 0", borderRadius: 999, border: "none",
                   fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
                   background: activeView === "vendite" ? "#111" : "transparent",
                   color: activeView === "vendite" ? "#fff" : "#888",
@@ -762,7 +861,7 @@ export default function DashboardCharts({
               <button
                 onClick={() => { setActiveView("magazzino"); setViewAnimKey(k => k + 1); }}
                 style={{
-                  flex: 1, padding: "9px 0", borderRadius: 999, border: "none",
+                  flex: 1, padding: "7px 0", borderRadius: 999, border: "none",
                   fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
                   background: activeView === "magazzino" ? "#111" : "transparent",
                   color: activeView === "magazzino" ? "#fff" : "#888",
@@ -813,8 +912,8 @@ export default function DashboardCharts({
               <div key={`recenti-${viewAnimKey}`} className="fx-up-1" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
 
                 {/* Header mobile: fuori dalla card */}
-                <div className="mobile-flex-header" style={{ marginBottom: 14, padding: "0 2px" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-.02em" }}>Attività Recenti</div>
+                <div className="mobile-flex-header" style={{ marginBottom: 8, padding: "0 2px" }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: INK, letterSpacing: "-.02em" }}>Attività Recenti</div>
                   <div
                     className={`fx-pill-search${searchOpen ? " open" : ""}`}
                     onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => { const el = document.getElementById("mob-search-input"); if (el) el.focus(); }, 420); } }}
@@ -854,6 +953,7 @@ export default function DashboardCharts({
                   </div>
                 </div>
                 {/* ── MOBILE list (hidden on desktop) ── */}
+                <div className="mobile-view-toggle fx-mobile-list-wrap">
                 <div className="mobile-view-toggle fx-mobile-list">
                   {filteredSales.length === 0 ? (
                     <div style={{ textAlign: "center", color: SL, padding: "32px 12px", fontSize: 13 }}>
@@ -869,58 +969,78 @@ export default function DashboardCharts({
                     const marginAbs = amount - cost;
                     const photoUrl = sale.template_id_ext ? photoMap[sale.template_id_ext] : null;
                     const prof = profiles.find((p: any) => p.id === sale.profile_id);
+                    const saleId = sale.id ?? "";
+                    const isCtxOpen = ctxMenuId === saleId && ctxMenuType === "sale";
+                    const isOpen = sale.status === "open" || !sale.status;
+                    const isClosed = sale.status === "closed";
                     return (
-                      <div key={sale.id || i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: i < filteredSales.length - 1 ? `1px solid ${BD}` : "none" }}>
-                        {/* Thumbnail */}
-                        {photoUrl ? (
-                          <img src={photoUrl} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-                        ) : (
-                          <div style={{ width: 42, height: 42, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <ShoppingBag size={16} color={SL} />
-                          </div>
+                      <div
+                        key={sale.id || i}
+                        className={isCtxOpen ? "lp-row-active" : ""}
+                        style={{ position: "relative", userSelect: "none", touchAction: "pan-y" }}
+                        {...makeLongPressHandlers(saleId, "sale")}
+                      >
+                        {/* Divisore sfumato sopra (non sul primo, non quando la riga corrente o precedente è attiva) */}
+                        {i > 0 && !isCtxOpen && ctxMenuId !== (filteredSales[i - 1]?.id ?? "") && (
+                          <div style={{ height: "0.5px", background: `linear-gradient(90deg, transparent, ${BD} 15%, ${BD} 85%, transparent)`, margin: "0 2px" }} />
                         )}
-                        {/* Centro: nome + data — prende tutto lo spazio disponibile */}
-                        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
-                            {(sale.buyer_seller || sale.item_name || "Vendita")}
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                            {prof && (
-                              prof.avatar_url
-                                ? <img src={prof.avatar_url} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                                : <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#007782", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{prof.name.charAt(0).toUpperCase()}</div>
-                            )}
-                            <span style={{ fontSize: 11, color: SL }}>{dateStr}</span>
-                          </div>
-                        </div>
-                        {/* Badge stato — larghezza fissa, sempre allineato */}
-                        <div style={{ flexShrink: 0, display: "flex", justifyContent: "center" }}>
-                          <span
-                            onClick={() => setStatusFilter(statusFilter === (sale.status || "open") ? null : (sale.status || "open"))}
-                            className={sale.status === "closed" ? "fx-pill-done" : "fx-pill-open"}
-                            style={{ fontSize: 10, padding: "3px 9px", opacity: statusFilter && statusFilter !== (sale.status || "open") ? 0.4 : 1, transition: "opacity .15s" }}
-                          >
-                            <span className="fx-pill-dot" style={{ background: sale.status === "closed" ? "#6bb800" : "#f5a623" }} />
-                            {sMeta.label}
-                          </span>
-                        </div>
-                        {/* Destra: prezzo + margine */}
-                        <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: "tabular-nums", letterSpacing: "-.02em" }}>€{fmt(amount)}</div>
-                          {cost > 0 && (
-                            <div
-                              style={{ fontSize: 11, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED, marginTop: 1, cursor: "pointer" }}
-                              onClick={() => setShowPctMargin(v => !v)}
-                            >
-                              {showPctMargin
-                                ? `${marginAbs >= 0 ? "▲" : "▼"} ${cost > 0 ? Math.round(((amount - cost) / cost) * 100) : 0}%`
-                                : `${marginAbs >= 0 ? "+" : ""}€${fmt(marginAbs)}`}
+                        {/* Riga principale */}
+                        <div className="lp-row-inner" style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 2px" }}>
+                          {/* Thumbnail */}
+                          {photoUrl ? (
+                            <img src={photoUrl} alt="" style={{ width: 50, height: 50, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: 50, height: 50, borderRadius: 12, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <ShoppingBag size={18} color={SL} />
                             </div>
                           )}
+                          {/* Contenuto: due righe */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {/* Riga 1: nome + prezzo */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                                {sale.buyer_seller || sale.item_name || "Vendita"}
+                              </span>
+                              <span style={{ fontSize: 15, fontWeight: 800, color: INK, fontVariantNumeric: "tabular-nums", letterSpacing: "-.02em", flexShrink: 0 }}>
+                                €{fmt(amount)}
+                              </span>
+                            </div>
+                            {/* Riga 2: data + badge + margine */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                {prof && (
+                                  prof.avatar_url
+                                    ? <img src={prof.avatar_url} alt="" style={{ width: 15, height: 15, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                                    : <div style={{ width: 15, height: 15, borderRadius: "50%", background: "#007782", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{prof.name.charAt(0).toUpperCase()}</div>
+                                )}
+                                <span style={{ fontSize: 11, color: SL }}>{dateStr}</span>
+                                <span
+                                  onClick={() => setStatusFilter(statusFilter === (sale.status || "open") ? null : (sale.status || "open"))}
+                                  className={isClosed ? "fx-pill-done" : "fx-pill-open"}
+                                  style={{ fontSize: 10, padding: "2px 8px", opacity: statusFilter && statusFilter !== (sale.status || "open") ? 0.4 : 1, transition: "opacity .15s" }}
+                                >
+                                  <span className="fx-pill-dot" style={{ background: isClosed ? "#6bb800" : "#f5a623" }} />
+                                  {sMeta.label}
+                                </span>
+                              </div>
+                              {cost > 0 && (
+                                <span
+                                  style={{ fontSize: 12, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED, fontVariantNumeric: "tabular-nums", cursor: "pointer", flexShrink: 0 }}
+                                  onClick={() => setShowPctMargin(v => !v)}
+                                >
+                                  {showPctMargin
+                                    ? `${marginAbs >= 0 ? "▲" : "▼"} ${cost > 0 ? Math.round(((amount - cost) / cost) * 100) : 0}%`
+                                    : `${marginAbs >= 0 ? "+" : ""}€${fmt(marginAbs)}`}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+
                       </div>
                     );
                   })}
+                </div>
                 </div>
 
                 {/* ── DESKTOP table (hidden on mobile) ── */}
@@ -1038,8 +1158,8 @@ export default function DashboardCharts({
               <div key={`stock-${viewAnimKey}`} className="fx-up-0">
 
                 {/* Header mobile: fuori dalla card */}
-                <div className="mobile-flex-header" style={{ marginBottom: 14, padding: "0 2px" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-.02em" }}>Stock Magazzino</div>
+                <div className="mobile-flex-header" style={{ marginBottom: 8, padding: "0 2px" }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: INK, letterSpacing: "-.02em" }}>Stock Magazzino</div>
                   <div
                     className={`fx-pill-search${stockSearchOpen ? " open" : ""}`}
                     onClick={() => { if (!stockSearchOpen) { setStockSearchOpen(true); setTimeout(() => { const el = document.getElementById("mob-stock-input"); if (el) el.focus(); }, 420); } }}
@@ -1078,6 +1198,7 @@ export default function DashboardCharts({
                   </div>
                 </div>
                 {/* ── MOBILE stock list ── */}
+                <div className="mobile-view-toggle fx-mobile-list-wrap">
                 <div className="mobile-view-toggle fx-mobile-list">
                   {filteredStock.length === 0 ? (
                     <div style={{ textAlign: "center", color: SL, padding: "32px 12px", fontSize: 13 }}>Nessun articolo trovato</div>
@@ -1088,47 +1209,68 @@ export default function DashboardCharts({
                     const marginAbs = price - cost;
                     const days = item.purchased_at ? Math.floor((Date.now() - new Date(item.purchased_at).getTime()) / 86400000) : null;
                     const isStale = days !== null && days > 60;
+                    const stockId = item.id ?? "";
+                    const isCtxOpen = ctxMenuId === stockId && ctxMenuType === "stock";
                     return (
-                      <div key={item.id || i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < filteredStock.length - 1 ? `1px solid ${BD}` : "none" }}>
-                        {photoUrl ? (
-                          <img src={photoUrl} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-                        ) : (
-                          <div style={{ width: 42, height: 42, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <Package size={16} color={SL} />
-                          </div>
+                      <div
+                        key={item.id || i}
+                        className={isCtxOpen ? "lp-row-active" : ""}
+                        style={{ position: "relative", userSelect: "none", touchAction: "pan-y" }}
+                        {...makeLongPressHandlers(stockId, "stock")}
+                      >
+                        {/* Divisore sfumato sopra (non sul primo, non quando la riga corrente o precedente è attiva) */}
+                        {i > 0 && !isCtxOpen && ctxMenuId !== (filteredStock[i - 1]?.id ?? "") && (
+                          <div style={{ height: "0.5px", background: `linear-gradient(90deg, transparent, ${BD} 15%, ${BD} 85%, transparent)`, margin: "0 2px" }} />
                         )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
-                            {item.name || "Articolo"}
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            {item.size && <span style={{ fontSize: 11, color: SL }}>{item.size}</span>}
-                            {item.size && days !== null && <span style={{ fontSize: 11, color: SL }}>·</span>}
-                            {days !== null && (
-                              <span style={{ fontSize: 11, color: isStale ? AMB : SL, display: "flex", alignItems: "center", gap: 3 }}>
-                                {isStale && <AlertTriangle size={10} />}{days}gg
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: "tabular-nums", letterSpacing: "-.02em" }}>
-                            {price > 0 ? `€${fmt(price)}` : "—"}
-                          </div>
-                          {price > 0 && cost > 0 && (
-                            <div style={{ fontSize: 11, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED, marginTop: 2 }}>
-                              {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
+                        <div className="lp-row-inner" style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 2px" }}>
+                          {/* Thumbnail */}
+                          {photoUrl ? (
+                            <img src={photoUrl} alt="" style={{ width: 50, height: 50, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: 50, height: 50, borderRadius: 12, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <Package size={18} color={SL} />
                             </div>
                           )}
-                          {isStale && (
-                            <span style={{ fontSize: 10, fontWeight: 600, color: AMB, background: "#fef3c7", padding: "2px 7px", borderRadius: 999, marginTop: 3, display: "inline-block" }}>
-                              clearance
-                            </span>
-                          )}
+                          {/* Contenuto: due righe */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {/* Riga 1: nome + prezzo potenziale */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                                {item.name || "Articolo"}
+                              </span>
+                              <span style={{ fontSize: 15, fontWeight: 800, color: INK, fontVariantNumeric: "tabular-nums", letterSpacing: "-.02em", flexShrink: 0 }}>
+                                {price > 0 ? `€${fmt(price)}` : "—"}
+                              </span>
+                            </div>
+                            {/* Riga 2: taglia + giorni + margine / clearance */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                {item.size && <span style={{ fontSize: 11, color: SL }}>{item.size}</span>}
+                                {item.size && days !== null && <span style={{ fontSize: 11, color: SL }}>·</span>}
+                                {days !== null && (
+                                  <span style={{ fontSize: 11, color: isStale ? AMB : SL, display: "flex", alignItems: "center", gap: 3 }}>
+                                    {isStale && <AlertTriangle size={10} />}{days}gg
+                                  </span>
+                                )}
+                                {isStale && (
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: AMB, background: "#fef3c7", padding: "2px 7px", borderRadius: 999, marginLeft: 2 }}>
+                                    clearance
+                                  </span>
+                                )}
+                              </div>
+                              {price > 0 && cost > 0 && (
+                                <span style={{ fontSize: 12, fontWeight: 700, color: marginAbs >= 0 ? "#6bb800" : RED, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+                                  {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+
                       </div>
                     );
                   })}
+                </div>
                 </div>
 
                 {/* ── DESKTOP stock table ── */}
@@ -1360,6 +1502,172 @@ export default function DashboardCharts({
         </div>
       </div>
 
+      {/* ── Global context menu portal (position: fixed, escapes overflow) ── */}
+      {ctxMenuId && ctxPos && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 9998 }} onClick={closeCtxMenu} />
+          <div
+            className="lp-menu"
+            style={{ top: ctxPos.top, right: ctxPos.right, maxHeight: "60vh", overflowY: "auto" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {ctxMenuType === "sale" && ctxSaleDataAll && (() => {
+              const s = ctxSaleDataAll;
+              const amount = Number(s.amount ?? 0);
+              const isOpen = s.status === "open" || !s.status;
+              const saleId = s.id ?? "";
+              return (
+                <>
+                  <div className="lp-menu-header">
+                    <div className="lp-menu-name">{s.buyer_seller || s.item_name || "Vendita"}</div>
+                    <div className="lp-menu-sub">€{fmt(amount)} · {isOpen ? "In sospeso" : "Completato"}</div>
+                  </div>
+                  {isOpen && (
+                    <button className="lp-menu-action" onClick={() => {
+                      closeCtxMenu();
+                      startTransition(() => changeSaleStatus(saleId, "closed").then(() => window.location.reload()));
+                    }}>
+                      <div className="lp-icon lp-icon-green">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8.5l4 4 8-8" stroke="#3d6e00" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                      <span className="lp-menu-action-label">Completa la vendita</span>
+                    </button>
+                  )}
+                  <button className="lp-menu-action" onClick={() => { closeCtxMenu(); setModalSale(s as any); }}>
+                    <div className="lp-icon lp-icon-blue">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 11.5V14h2.5l7.1-7.1-2.5-2.5L2 11.5z" stroke="#185FA5" strokeWidth="1.3" strokeLinejoin="round"/><path d="M11.5 2.5l2 2" stroke="#185FA5" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    </div>
+                    <span className="lp-menu-action-label">Modifica</span>
+                  </button>
+                  <button className="lp-menu-action" onClick={() => {
+                    closeCtxMenu();
+                    startTransition(() => deleteSale(saleId).then(() => window.location.reload()));
+                  }}>
+                    <div className="lp-icon lp-icon-red">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#c0392b" strokeWidth="1.6" strokeLinecap="round"/></svg>
+                    </div>
+                    <span className="lp-menu-action-label-danger">Annulla la vendita</span>
+                  </button>
+                </>
+              );
+            })()}
+            {ctxMenuType === "stock" && ctxStockData && (() => {
+              const item = ctxStockData;
+              const cost = Number(item.purchase_price ?? 0);
+              return (
+                <>
+                  <div className="lp-menu-header">
+                    <div className="lp-menu-name">{item.name || "Articolo"}</div>
+                    <div className="lp-menu-sub">{cost > 0 ? `€${fmt(cost)} costo` : "In stock"}{item.size ? ` · ${item.size}` : ""}</div>
+                  </div>
+                  <button className="lp-menu-action" onClick={() => { closeCtxMenu(); setModalSell(item); }}>
+                    <div className="lp-icon lp-icon-green">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1.5 1.5h2l2.4 7.3h6.6l1.6-4.6H5.3" stroke="#3d6e00" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><circle cx="7" cy="13" r="1.1" fill="#3d6e00"/><circle cx="11.5" cy="13" r="1.1" fill="#3d6e00"/></svg>
+                    </div>
+                    <span className="lp-menu-action-label">Segna come venduto</span>
+                  </button>
+                  <button className="lp-menu-action" onClick={() => { closeCtxMenu(); setModalBundle(item.id ?? null); }}>
+                    <div className="lp-icon" style={{ background: "rgba(0,119,130,.1)" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#005f69" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    </div>
+                    <span className="lp-menu-action-label" style={{ color: "#005f69", fontWeight: 700 }}>Crea bundle</span>
+                  </button>
+                  <button className="lp-menu-action" onClick={() => { closeCtxMenu(); setModalStock(item); }}>
+                    <div className="lp-icon lp-icon-blue">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 11.5V14h2.5l7.1-7.1-2.5-2.5L2 11.5z" stroke="#185FA5" strokeWidth="1.3" strokeLinejoin="round"/><path d="M11.5 2.5l2 2" stroke="#185FA5" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    </div>
+                    <span className="lp-menu-action-label">Modifica</span>
+                  </button>
+                  <button className="lp-menu-action" onClick={() => {
+                    closeCtxMenu();
+                    startTransition(() => deleteStockItem(item.id ?? "").then(() => window.location.reload()));
+                  }}>
+                    <div className="lp-icon lp-icon-red">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 4h11M6 4V2.5h4V4M3.5 4l.7 9h8.6l.7-9" stroke="#c0392b" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <span className="lp-menu-action-label-danger">Elimina articolo</span>
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+        </>
+      )}
+
+      {/* ── Context menu modals ── */}
+      {modalSale && (
+        <SaleModal
+          mode="edit"
+          sale={{
+            id:               modalSale.id ?? "",
+            buyer_seller:     modalSale.buyer_seller ?? null,
+            amount:           modalSale.amount ?? null,
+            cost:             modalSale.cost ?? null,
+            platform:         null,
+            status:           modalSale.status ?? null,
+            notes:            null,
+            transaction_date: modalSale.transaction_date ?? null,
+            template_id_ext:  modalSale.template_id_ext ?? null,
+            profile_id:       modalSale.profile_id ?? null,
+          }}
+          profiles={profiles.map(p => ({ id: p.id, name: p.name }))}
+          onClose={() => { setModalSale(null); window.location.reload(); }}
+        />
+      )}
+      {modalStock && (
+        <StockEditModal
+          item={{
+            id:             modalStock.id ?? "",
+            name:           modalStock.name ?? null,
+            size:           modalStock.size ?? null,
+            quantity:       modalStock.quantity ?? null,
+            purchase_price: modalStock.purchase_price ?? null,
+            purchased_at:   modalStock.purchased_at ?? null,
+            location:       null,
+            status:         modalStock.status ?? null,
+            template_id_ext: modalStock.template_id_ext ?? null,
+            profile_id:     modalStock.profile_id ?? null,
+          }}
+          thumb={modalStock.template_id_ext ? (photoMap[modalStock.template_id_ext] ?? null) : null}
+          profiles={profiles.map(p => ({ id: p.id, name: p.name }))}
+          onClose={() => { setModalStock(null); window.location.reload(); }}
+        />
+      )}
+      {modalSell && (
+        <SellModal
+          item={{
+            id:              modalSell.id ?? "",
+            name:            modalSell.name ?? null,
+            purchase_price:  modalSell.purchase_price ?? null,
+            template_id_ext: modalSell.template_id_ext ?? null,
+            profile_id:      modalSell.profile_id ?? null,
+            size:            modalSell.size ?? null,
+          }}
+          thumb={modalSell.template_id_ext ? (photoMap[modalSell.template_id_ext] ?? null) : null}
+          onClose={() => { setModalSell(null); window.location.reload(); }}
+        />
+      )}
+      {modalBundle !== undefined && modalBundle !== null && (
+        <BundleModal
+          availableItems={stockItems
+            .filter(i => i.status === "available" && i.id)
+            .map(i => ({
+              id:             i.id ?? "",
+              name:           i.name ?? null,
+              size:           i.size ?? null,
+              quantity:       i.quantity ?? null,
+              purchase_price: i.purchase_price ?? null,
+              status:         i.status ?? null,
+              purchased_at:   i.purchased_at ?? null,
+              profile_id:     i.profile_id ?? null,
+              template_id_ext: i.template_id_ext ?? null,
+            }))}
+          photoMap={photoMap}
+          profileMap={Object.fromEntries(profiles.map(p => [p.id, p.name]))}
+          preselectedId={modalBundle}
+          onClose={() => { setModalBundle(null); window.location.reload(); }}
+        />
+      )}
     </>
   );
 }

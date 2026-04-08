@@ -67,7 +67,7 @@ export default function MobileHeader({
   return (
     <>
       <style>{`
-        .mh-root { background: #007782; padding: 18px 20px 110px; flex-shrink: 0; }
+        .mh-root { background: #007782; padding: 18px 20px 110px; flex-shrink: 0; min-height: 220px; }
 
         .mh-topbar {
           display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;
@@ -84,12 +84,14 @@ export default function MobileHeader({
         .mh-profit-label {
           color: rgba(255,255,255,.4); font-size: 9px; font-weight: 600;
           letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px;
+          min-height: 14px;
         }
         .mh-profit-val {
           font-size: 48px; font-weight: 900; color: #a8e63d;
           letter-spacing: -.05em; line-height: 1;
+          min-height: 48px;
         }
-        .mh-profit-sub { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .mh-profit-sub { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 28px; }
         .mh-delta {
           background: rgba(168,230,61,.15); border: 1px solid rgba(168,230,61,.35);
           color: #a8e63d; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px;
@@ -140,7 +142,7 @@ export default function MobileHeader({
                 return (
                   <div key={p.id} onClick={() => handleProfile(isActive ? null : p.id)} style={{
                     width: size, height: size, borderRadius: "50%",
-                    border: isActive ? "3px solid #fff" : "2.5px solid rgba(255,255,255,.35)",
+                    border: isActive ? "3px solid #007782" : "2.5px solid rgba(255,255,255,.35)",
                     flexShrink: 0, cursor: "pointer",
                     marginLeft: i === 0 ? 0 : -14,
                     zIndex: profiles.length - i, position: "relative",
@@ -163,7 +165,7 @@ export default function MobileHeader({
         {/* Greeting + profit */}
         <div className="mh-greeting">{greeting},</div>
         <div style={{ color: "#fff", fontSize: 20, fontWeight: 800, letterSpacing: "-.02em", marginBottom: 12 }}>{firstName}</div>
-        <div className="mh-profit-label">Profitto totale all time</div>
+        <div className="mh-profit-label">{selectedProfileId ? "Profitto profilo" : "Profitto totale all time"}</div>
         <div className="mh-profit-val">€{fmt(allTimeProfit)}</div>
         <div className="mh-profit-sub">
           <span className="mh-delta">+{allTimeMargin}%</span>

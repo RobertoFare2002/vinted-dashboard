@@ -107,6 +107,12 @@ export default async function DashboardPage({
   const profit       = allRevenue + allPending - allCost;
   const avgMargin    = allCost > 0 ? Math.round(((allRevenue + allPending - allCost) / allCost) * 100) : 0;
 
+  // Profitto filtrato per profilo (usato nel banner mobile quando un profilo è selezionato)
+  const profileProfit = totalRevenue + totalPending - totalCost;
+  const profileMargin = totalCost > 0 ? Math.round(((totalRevenue + totalPending - totalCost) / totalCost) * 100) : 0;
+  const displayProfit = selectedProfileId ? profileProfit : profit;
+  const displayMargin = selectedProfileId ? profileMargin : avgMargin;
+
   const staleItems = stock.filter((i: any) => {
     if (!i.purchased_at) return false;
     return Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60;
@@ -263,8 +269,8 @@ export default async function DashboardPage({
           ytdMargin={ytdMargin}
           ytdRevenue={ytdRevenue}
           allRevenue={allRevenue}
-          allTimeProfit={profit}
-          allTimeMargin={avgMargin}
+          allTimeProfit={displayProfit}
+          allTimeMargin={displayMargin}
           profileRevenue={totalRevenue}
           profilePending={totalPending}
           profileTotalSales={closed.length}

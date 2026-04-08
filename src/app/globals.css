@@ -29,7 +29,7 @@ html, body {
   color: var(--ink);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* Scrollbar */
@@ -206,42 +206,54 @@ html, body {
 
 /* ── MOBILE LAYOUT (<= 860px) ── */
 @media (max-width: 860px) {
-  /* shell-main: scorre verticalmente su mobile */
+  /* hide ALL scrollbars on mobile */
+  * { scrollbar-width: none !important; }
+  *::-webkit-scrollbar { display: none !important; }
+
+  /* shell-main: bloccato su mobile, niente scroll esterno */
   .shell-main {
     padding: 0 !important;
     flex: 1;
     min-height: 0;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow: hidden !important;
     background: #F5F5F5;
-    -webkit-overflow-scrolling: touch;
-    height: auto !important;
-    max-height: none !important;
-    display: block !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
-  /* page wrap stacks vertically, no fixed height */
+  /* page wrap: fills shell, no overflow */
   .fx-page-wrap {
-    flex: none;
-    min-height: unset;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
     gap: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   /* desktop greeting hidden on mobile */
   .desktop-greeting { display: none !important; }
-  /* grid wrap scrollable */
+  /* grid wrap: scrolls internally, no visible scrollbar */
   .fx-grid-wrap {
     flex: 1;
-    overflow: visible;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 12px 12px 80px;
     display: flex;
     flex-direction: column;
   }
+  .fx-grid-wrap::-webkit-scrollbar { display: none; }
   /* spacing between kpi cards and content below */
-  .mh-kpi-wrap { margin-bottom: 16px; }
+  .mh-kpi-wrap { margin-bottom: 6px; }
   /* mobile grid: single col, no fixed height */
   .fx-grid {
     height: auto !important;
     overflow: visible !important;
-    gap: 12px;
+    gap: 4px;
   }
   .fx-right {
     height: auto !important;
@@ -281,10 +293,22 @@ html, body {
     display: flex !important;
     flex-direction: column;
     gap: 0;
-    max-height: 420px;
-    overflow-y: auto !important;
+    max-height: 222px;
+    overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+  }
+  .fx-mobile-list-wrap {
+    position: relative;
+  }
+  .fx-mobile-list-wrap::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 36px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.92));
+    pointer-events: none;
+    border-radius: 0 0 16px 16px;
   }
   /* tab bar sizing */
   .mtb-root {
