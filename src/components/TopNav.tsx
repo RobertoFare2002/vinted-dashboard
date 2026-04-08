@@ -439,48 +439,32 @@ export default function TopNav({
           </button>
 
           {dropOpen && (
-            <div className="tn-dropdown">
-              <button className="tn-drop-item" onClick={() => { setDropOpen(false); setSettingsOpen(true); }}>
-                <Settings size={15} color="#888888" strokeWidth={1.8} />
-                Impostazioni account
-              </button>
-              <button className="tn-drop-item" onClick={() => { setDropOpen(false); setChangelogOpen(true); }}>
-                <Sparkles size={15} color="#888888" strokeWidth={1.8} />
-                Scopri le novità
-              </button>
-              <div className="tn-drop-divider" />
-              <div className="tn-dark-row">
-                <span className="tn-dark-label">{isDark ? "Dark mode" : "Light mode"}</span>
-                <button className={`tn-pill${isDark ? " on" : ""}`} onClick={() => setIsDark(v => !v)}>
-                  <div className="tn-pill-thumb">
-                    <div className="tn-ico-sun">
-                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                        <circle cx="7" cy="7" r="2.4" fill="#888"/>
-                        <line x1="7" y1="0.5" x2="7" y2="2.2" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                        <line x1="7" y1="11.8" x2="7" y2="13.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                        <line x1="0.5" y1="7" x2="2.2" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                        <line x1="11.8" y1="7" x2="13.5" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                        <line x1="2.4" y1="2.4" x2="3.5" y2="3.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                        <line x1="10.5" y1="10.5" x2="11.6" y2="11.6" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                        <line x1="2.4" y1="11.6" x2="3.5" y2="10.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                        <line x1="10.5" y1="3.5" x2="11.6" y2="2.4" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                    <div className="tn-ico-moon">
-                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                        <path d="M11 7.8A4.8 4.8 0 016.2 3c0-.3.03-.59.08-.88A4.8 4.8 0 1011 7.8z" fill="#888"/>
-                      </svg>
-                    </div>
-                  </div>
-                </button>
-              </div>
-              <div className="tn-drop-divider" />
-              <button className="tn-drop-item danger" onClick={handleLogout}>
-                <LogOut size={15} strokeWidth={1.8} />
-                Esci
-              </button>
-            </div>
-          )}
+  <div className="tn-dropdown">
+    <button className="tn-drop-item" onClick={() => { setDropOpen(false); setSettingsOpen(true); }}>
+      <Settings size={15} color="var(--slate)" strokeWidth={1.8} />
+      Impostazioni account
+    </button>
+    <button className="tn-drop-item" onClick={() => { setDropOpen(false); setChangelogOpen(true); }}>
+      <Sparkles size={15} color="var(--slate)" strokeWidth={1.8} />
+      Scopri le novità
+    </button>
+    <div className="tn-drop-divider" />
+    <div className="tn-dark-row">
+      <span className="tn-dark-label">{isDark ? "Dark mode" : "Light mode"}</span>
+      <button className={`tn-pill${isDark ? " on" : ""}`} onClick={() => setIsDark(v => !v)}>
+        <div className="tn-pill-thumb">
+          <div className="tn-ico-sun">...</div>
+          <div className="tn-ico-moon">...</div>
+        </div>
+      </button>
+    </div>
+    <div className="tn-drop-divider" />
+    <button className="tn-drop-item danger" onClick={handleLogout}>
+      <LogOut size={15} strokeWidth={1.8} />
+      Esci
+    </button>
+  </div>
+)}
         </div>
       </header>
 
