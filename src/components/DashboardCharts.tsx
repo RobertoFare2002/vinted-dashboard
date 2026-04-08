@@ -237,6 +237,7 @@ export default function DashboardCharts({
   const makeLongPressHandlers = (id: string, type: "sale" | "stock") => ({
     onPointerDown: (e: React.PointerEvent) => {
       if (e.pointerType === "mouse") return;
+      e.preventDefault();
       const el = e.currentTarget as HTMLElement;
       longPressTimer.current = setTimeout(() => openCtxMenu(id, type, el), 500);
     },
