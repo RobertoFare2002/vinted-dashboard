@@ -7,9 +7,9 @@ const AMB  = "#F5A623";   // in sospeso
 const V    = "#007782";   // disponibili (Vinted)
 const RED  = "#FF4D4D";   // clearance
 const DIM  = "rgba(235,235,235,0.35)";
-const INK  = "#111111";
-const SL   = "#888888";
-const W    = "#ffffff";
+const INK  = "var(--ink)";
+const SL   = "var(--slate)";
+const W    = "var(--white)";
 
 type Selection = "all" | "venduti" | "stock" | "completati" | "sospeso" | "disponibili" | "clearance";
 
@@ -76,20 +76,20 @@ export default function ConversionRateCard({ sold, pending, available, staleItem
   return (
     <>
       <style>{`
-        .crc-root { background:${W}; border-radius:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:24px 24px 20px; display:flex; flex-direction:column; align-items:center; }
-        .crc-title { font-size:11px; font-weight:600; color:${SL}; text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; align-self:flex-start; }
+        .crc-root { background:var(--white); border-radius:20px; border:1px solid var(--border); box-shadow:0 4px 20px rgba(0,0,0,0.06); transition:background .35s, border-color .25s; padding:24px 24px 20px; display:flex; flex-direction:column; align-items:center; }
+        .crc-title { font-size:11px; font-weight:600; color:var(--slate); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; align-self:flex-start; }
         .crc-grp { border-radius:0 6px 6px 0; padding:8px 8px 8px 10px; cursor:pointer; transition:all .18s; }
         .crc-grp:hover { filter: brightness(0.97); }
         .crc-item { font-size:14px; font-weight:600; cursor:pointer; padding:1px 3px; border-radius:4px; transition:background .15s; display:inline-block; }
         .crc-item:hover { background: rgba(0,0,0,0.05); }
-        .crc-hint { font-size:10px; color:${SL}; margin-top:8px; opacity:0.65; }
+        .crc-hint { font-size:10px; color:var(--slate); margin-top:8px; opacity:0.65; }
       `}</style>
 
       <div className="crc-root">
         <div className="crc-title">Tasso conversione stock</div>
 
         <svg width="150" height="80" viewBox="0 0 140 76" style={{ overflow: "visible" }}>
-          <path d={path} fill="none" stroke="#EBEBEB" strokeWidth="11" strokeLinecap="butt" />
+          <path d={path} fill="none" stroke="var(--border)" strokeWidth="11" strokeLinecap="butt" />
           {lenSold > 0 && (
             <path d={path} fill="none" stroke={segColor("completati", GRN)} strokeWidth="11" strokeLinecap="butt"
               strokeDasharray={`${lenSold} ${GAP}`} strokeDashoffset={0} style={{ transition: "stroke .25s" }} />

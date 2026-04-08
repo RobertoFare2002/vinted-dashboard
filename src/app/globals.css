@@ -30,6 +30,7 @@ html, body {
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+  transition: background .35s, color .25s;
 }
 
 /* Scrollbar */
@@ -47,6 +48,7 @@ html, body {
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  transition: background .35s, color .25s, box-shadow .35s;
 }
 
 .card-green {
@@ -241,6 +243,9 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    user-select: none;
     scrollbar-width: none;
     padding: 12px 12px 80px;
     display: flex;
@@ -297,6 +302,9 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    user-select: none;
   }
   .fx-mobile-list-wrap {
     position: relative;
@@ -337,3 +345,193 @@ html, body {
   font-weight: 700;
   letter-spacing: -0.03em;
 }
+
+/* ── DARK MODE ── */
+
+/* Script anti-flash è in layout.tsx */
+
+html.dark {
+  /* Variabili brand */
+  --primary:     #00a0af;
+  --primary-dark:#007782;
+
+  /* Variabili base — usate da body, card, button, tbl */
+  --ink:         #f0f0f0;
+  --slate:       rgba(255,255,255,.45);
+  --light:       #111113;
+  --border:      rgba(255,255,255,.09);
+  --white:       #1e1e20;
+  --green:       #7fd400;
+  --green-light: #9de800;
+  --green-bg:    rgba(107,184,0,.15);
+  --green-bg2:   rgba(107,184,0,.10);
+}
+
+/* ── Body e sfondo pagina ── */
+html.dark body { background: #111113; color: #f0f0f0; }
+html.dark .fx-page-wrap { background: #111113 !important; }
+html.dark .fx-grid-wrap { background: #111113 !important; }
+
+/* ── Scrollbar ── */
+html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); }
+
+/* ── Card sistema ── */
+html.dark .card {
+  background: #1e1e20;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  color: #f0f0f0;
+}
+html.dark .card-green  { background: #0a0a0c; }
+html.dark .card-label  { color: rgba(255,255,255,.4); }
+html.dark .card-value  { color: #f0f0f0; }
+html.dark .card-delta  { background: rgba(0,160,175,.15); color: #00a0af; }
+
+/* ── Bottoni ── */
+html.dark .btn-outline {
+  background: #27272a;
+  color: #f0f0f0;
+  border-color: rgba(255,255,255,.12);
+}
+html.dark .btn-outline:hover { background: #333336; }
+
+/* ── Tabelle ── */
+html.dark .tbl th  { color: rgba(255,255,255,.4); border-bottom-color: rgba(255,255,255,.08); }
+html.dark .tbl td  { border-bottom-color: rgba(255,255,255,.06); color: #f0f0f0; }
+html.dark .tbl tr:hover td { background: rgba(255,255,255,.04); }
+
+/* ── Pagina: greeting e sfondo ── */
+html.dark .fx-page-wrap { background: #111113; }
+html.dark .desktop-greeting h1 { color: #f0f0f0 !important; }
+html.dark .desktop-greeting p  { color: rgba(255,255,255,.45) !important; }
+html.dark .desktop-greeting strong { color: #f0f0f0 !important; }
+html.dark .desktop-greeting a  { color: rgba(255,255,255,.45) !important; }
+
+/* ── fx-card (griglia dashboard) ── */
+html.dark .fx-card {
+  background: #1e1e20 !important;
+  border-color: rgba(255,255,255,.09) !important;
+  color: #f0f0f0 !important;
+}
+html.dark .fx-card-title  { color: #f0f0f0 !important; }
+html.dark .fx-card-sub    { color: rgba(255,255,255,.4) !important; }
+html.dark .fx-card-value  { color: #f0f0f0 !important; }
+
+/* ── Profilo card ── */
+html.dark .fx-card h2,
+html.dark .fx-card h3,
+html.dark .fx-card p,
+html.dark .fx-card span:not(.badge):not([class*="kpi"]):not([class*="pill"]):not([class*="delta"]) {
+  color: inherit;
+}
+
+/* ── Tab segmented control ── */
+html.dark .fx-tab-active  { background: #f0f0f0 !important; color: #111 !important; }
+html.dark .fx-tab-inactive { color: rgba(255,255,255,.4) !important; }
+html.dark .fx-tab-inactive:hover { background: rgba(255,255,255,.07) !important; color: #f0f0f0 !important; }
+
+/* ── Pill filtro e search ── */
+html.dark .fx-pill-active   { background: #f0f0f0 !important; color: #111 !important; }
+html.dark .fx-pill-inactive { color: rgba(255,255,255,.4) !important; }
+html.dark .fx-pill-wrap     { background: rgba(255,255,255,.07) !important; }
+html.dark .fx-pill-search,
+html.dark .fx-search-wrap   {
+  background: rgba(255,255,255,.06) !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+html.dark .fx-pill-search input,
+html.dark .fx-search-wrap input { color: #f0f0f0 !important; }
+html.dark .fx-pill-search input::placeholder,
+html.dark .fx-search-wrap input::placeholder { color: rgba(255,255,255,.3) !important; }
+html.dark .fx-pill-close { color: rgba(255,255,255,.5) !important; }
+
+/* ── Intestazioni tabella inline ── */
+html.dark .fx-th       { color: rgba(255,255,255,.4) !important; border-color: rgba(255,255,255,.08) !important; }
+html.dark .fx-th-toggle { color: rgba(255,255,255,.4) !important; }
+
+/* ── Context menu long press ── */
+html.dark .lp-menu {
+  background: #27272a !important;
+  border-color: rgba(255,255,255,.12) !important;
+  box-shadow: 0 8px 40px rgba(0,0,0,.6) !important;
+}
+html.dark .lp-menu-header { border-color: rgba(255,255,255,.08) !important; }
+html.dark .lp-menu-name   { color: #f0f0f0 !important; }
+html.dark .lp-menu-sub    { color: rgba(255,255,255,.4) !important; }
+html.dark .lp-menu-action { color: #f0f0f0 !important; border-color: rgba(255,255,255,.08) !important; }
+html.dark .lp-menu-action:active { background: rgba(255,255,255,.07) !important; }
+html.dark .lp-icon-green  { background: rgba(107,184,0,.2) !important; }
+html.dark .lp-icon-blue   { background: rgba(59,130,246,.2) !important; }
+html.dark .lp-icon-red    { background: rgba(226,75,74,.2) !important; }
+html.dark .lp-icon-amber  { background: rgba(245,166,35,.2) !important; }
+html.dark .lp-backdrop    { background: rgba(0,0,0,.6) !important; }
+
+/* ── Gradient dissolvenza lista mobile ── */
+html.dark .fx-mobile-list-wrap::after {
+  background: linear-gradient(to bottom, transparent, rgba(17,17,19,0.96)) !important;
+}
+
+/* ── KPI card mobile (sopra header verde, rimane bianca) ── */
+html.dark .mh-kpi-card { background: #1e1e20 !important; }
+html.dark .mh-kpi-label { color: rgba(255,255,255,.4) !important; }
+html.dark .mh-kpi-val   { color: #f0f0f0 !important; }
+html.dark .mh-kpi-sub   { }
+
+/* ── MobileTabBar ── */
+html.dark .mtb-root  { background: #1e1e20 !important; border-top-color: rgba(255,255,255,.08) !important; }
+html.dark .mtb-label-inactive { color: rgba(255,255,255,.3) !important; }
+html.dark .mtb-menu  { background: #1e1e20 !important; border-color: rgba(255,255,255,.09) !important; box-shadow: 0 -4px 30px rgba(0,0,0,.5) !important; }
+html.dark .mtb-menu-user { border-color: rgba(255,255,255,.08) !important; }
+html.dark .mtb-menu-name  { color: #f0f0f0 !important; }
+html.dark .mtb-menu-email { color: rgba(255,255,255,.35) !important; }
+html.dark .mtb-menu-item  { color: #f0f0f0 !important; }
+html.dark .mtb-menu-item:hover { background: rgba(255,255,255,.07) !important; }
+html.dark .mtb-menu-item.danger { color: #ff6b6b !important; }
+html.dark .mtb-divider { background: rgba(255,255,255,.08) !important; }
+html.dark .mtb-dark-label { color: #f0f0f0 !important; }
+
+/* ── TopNav ── */
+html.dark .topnav  { background: #1e1e20 !important; border-bottom-color: rgba(255,255,255,.08) !important; }
+html.dark .tn-brand { color: #f0f0f0 !important; }
+html.dark .tn-name  { color: #f0f0f0 !important; }
+html.dark .tn-email { color: rgba(255,255,255,.35) !important; }
+html.dark .tn-user  { border-color: rgba(255,255,255,.12) !important; }
+html.dark .tn-user:hover { border-color: rgba(255,255,255,.25) !important; }
+html.dark .tn-user.open  { border-color: rgba(255,255,255,.5)  !important; }
+html.dark .tn-tab  { color: rgba(255,255,255,.4) !important; }
+html.dark .tn-tab:hover { background: rgba(255,255,255,.07) !important; color: #f0f0f0 !important; }
+html.dark .tn-tab-active { background: #f0f0f0 !important; color: #111 !important; }
+html.dark .tn-dropdown {
+  background: #1e1e20 !important;
+  border-color: rgba(255,255,255,.09) !important;
+  box-shadow: 0 8px 40px rgba(0,0,0,.55) !important;
+}
+html.dark .tn-drop-item         { color: #f0f0f0 !important; }
+html.dark .tn-drop-item:hover   { background: rgba(255,255,255,.07) !important; }
+html.dark .tn-drop-item.danger  { color: #ff6b6b !important; }
+html.dark .tn-drop-divider      { background: rgba(255,255,255,.08) !important; }
+html.dark .tn-dark-label        { color: #f0f0f0 !important; }
+html.dark .tn-settings-modal    { background: #1e1e20 !important; color: #f0f0f0 !important; }
+html.dark .tn-settings-header > div > div:first-child { color: #f0f0f0 !important; }
+html.dark .tn-settings-tabs     { border-bottom-color: rgba(255,255,255,.08) !important; }
+html.dark .tn-settings-tab      { color: rgba(255,255,255,.35) !important; }
+html.dark .tn-settings-tab:hover { color: #f0f0f0 !important; }
+html.dark .tn-settings-tab.active { color: #f0f0f0 !important; border-bottom-color: #f0f0f0 !important; }
+html.dark .tn-mark  { background: #27272a !important; }
+html.dark .tn-hamburger { color: rgba(255,255,255,.45) !important; }
+html.dark .tn-settings-body { background: #1e1e20; }
+
+/* ── Form inputs (impostazioni) ── */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark textarea,
+html.dark select {
+  background: #27272a !important;
+  color: #f0f0f0 !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: rgba(255,255,255,.25) !important; }
+html.dark label { color: #f0f0f0 !important; }
+
+/* ── Profili card sidebar ── */
+html.dark .fx-profile-name { color: #f0f0f0 !important; }
+html.dark .fx-profile-sub  { color: rgba(255,255,255,.4) !important; }

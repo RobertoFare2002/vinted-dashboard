@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 
 const G   = "#007782";
 const GBG = "#f0fad0";
-const INK = "#111111";
-const SL  = "#888888";
-const BD  = "#EBEBEB";
-const W   = "#ffffff";
+const INK = "var(--ink)";
+const SL  = "var(--slate)";
+const BD  = "var(--border)";
+const W   = "var(--white)";
 const AMB = "#F5A623";
 
 type SaleRow = {
@@ -94,7 +94,7 @@ export default function AvgTicketCard({ sales, selectedProfileId, defaultView = 
     <>
       <style>{`
         .atc-root {
-          background: ${W};
+          background: var(--white);
           border-radius: 20px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.06);
           padding: 18px 20px 14px;
@@ -109,16 +109,16 @@ export default function AvgTicketCard({ sales, selectedProfileId, defaultView = 
           to   { opacity: 1; transform: translateX(0); }
         }
         .atc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-        .atc-label { font-size:11px; font-weight:600; color:${SL}; text-transform:uppercase; letter-spacing:.06em; }
+        .atc-label { font-size:11px; font-weight:600; color:var(--slate); text-transform:uppercase; letter-spacing:.06em; }
         .atc-badge { font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; }
         .atc-badge-g { background:${GBG}; color:#3B6D11; }
         .atc-badge-a { background:#fef3c7; color:#854F0B; }
-        .atc-value { font-size:26px; font-weight:800; color:${INK}; letter-spacing:-.04em; line-height:1.1; margin-bottom:3px; }
-        .atc-sub { font-size:12px; color:${SL}; margin-bottom:10px; }
+        .atc-value { font-size:26px; font-weight:800; color:var(--ink); letter-spacing:-.04em; line-height:1.1; margin-bottom:3px; }
+        .atc-sub { font-size:12px; color:var(--slate); margin-bottom:10px; }
         .atc-track { height:5px; background:#F0F0F0; border-radius:999px; overflow:hidden; margin-bottom:5px; }
         .atc-fill-g { height:100%; border-radius:999px; background:${G}; transition:width .4s ease; }
         .atc-fill-a { height:100%; border-radius:999px; background:${AMB}; transition:width .4s ease; }
-        .atc-minmax { display:flex; justify-content:space-between; font-size:11px; color:${SL}; margin-bottom:10px; }
+        .atc-minmax { display:flex; justify-content:space-between; font-size:11px; color:var(--slate); margin-bottom:10px; }
         .atc-dots { display:flex; justify-content:center; gap:7px; }
         .atc-dot { border-radius:50%; border:none; padding:0; cursor:pointer; transition:all .18s; }
       `}</style>

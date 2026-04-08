@@ -6,10 +6,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const V    = "#007782";
 const V_L  = "rgba(0,119,130,0.15)";
-const INK  = "#111111";
-const SL   = "#888888";
-const BD   = "#EBEBEB";
-const W    = "#ffffff";
+const INK  = "var(--ink)";
+const SL   = "var(--slate)";
+const BD   = "var(--border)";
+const W    = "var(--white)";
 
 type SaleRow = { status?: string; transaction_date?: string };
 type View    = "week" | "month" | "year";
@@ -173,17 +173,17 @@ export default function SalesChartCard({ sales, onPeriodChange }: { sales: SaleR
   return (
     <>
       <style>{`
-        .scc-root { background:${W}; border-radius:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); padding:24px 24px 16px; display:flex; flex-direction:column; }
+        .scc-root { background:var(--white); border-radius:20px; border:1px solid var(--border); box-shadow:0 4px 20px rgba(0,0,0,0.06); transition:background .35s, border-color .25s; padding:24px 24px 16px; display:flex; flex-direction:column; }
         .scc-root .recharts-bar-rectangle path { stroke: none !important; stroke-width: 0 !important; }
         .scc-root .recharts-bar-rectangle { stroke: none !important; stroke-width: 0 !important; }
         .scc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:6px; }
-        .scc-title { font-size:11px; font-weight:600; color:${SL}; text-transform:uppercase; letter-spacing:.06em; }
+        .scc-title { font-size:11px; font-weight:600; color:var(--slate); text-transform:uppercase; letter-spacing:.06em; }
         .scc-nav { display:flex; align-items:center; gap:4px; }
-        .scc-nav-btn { width:22px; height:22px; border-radius:50%; border:1px solid ${BD}; background:${W}; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; padding:0; }
+        .scc-nav-btn { width:22px; height:22px; border-radius:50%; border:1px solid var(--border); background:var(--white); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; padding:0; }
         .scc-nav-btn:hover:not(:disabled) { background:#f5f5f5; }
         .scc-nav-btn:disabled { opacity:0.25; cursor:default; }
-        .scc-period { font-size:11px; font-weight:500; color:${INK}; min-width:90px; text-align:center; }
-        .scc-value { font-size:32px; font-weight:800; color:${INK}; letter-spacing:-.04em; line-height:1.1; margin-bottom:2px; transition: all .15s; }
+        .scc-period { font-size:11px; font-weight:500; color:var(--ink); min-width:90px; text-align:center; }
+        .scc-value { font-size:32px; font-weight:800; color:var(--ink); letter-spacing:-.04em; line-height:1.1; margin-bottom:2px; transition: all .15s; }
         .scc-sub { font-size:12px; color:${V}; margin-bottom:14px; }
         .scc-dots { display:flex; justify-content:center; align-items:center; gap:10px; margin-top:14px; }
         .scc-dot { border-radius:50%; cursor:pointer; border:none; padding:0; display:block; transition:all .18s ease; }

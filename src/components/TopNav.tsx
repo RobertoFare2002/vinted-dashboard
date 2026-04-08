@@ -92,7 +92,13 @@ export default function TopNav({
     }
   }, [settingsOpen]);
 
-  // Dark mode effect — persiste su localStorage e applica classe html
+  // Al mount: legge localStorage e imposta lo stato
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") setIsDark(true);
+  }, []);
+
+  // Quando isDark cambia: applica classe + salva
   useEffect(() => {
     const root = document.documentElement;
     if (isDark) {
@@ -103,13 +109,6 @@ export default function TopNav({
       localStorage.setItem("theme", "light");
     }
   }, [isDark]);
-
-  // Al mount, legge localStorage e sincronizza (serve per SSR)
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") setIsDark(true);
-    else if (saved === "light") setIsDark(false);
-  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -220,15 +219,15 @@ export default function TopNav({
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 13px",
-    background: "#F5F5F5", border: "1px solid #EBEBEB",
-    borderRadius: 12, color: "#111111", fontSize: 13,
+    background: "var(--light)", border: "1px solid #EBEBEB",
+    borderRadius: 12, color: "var(--ink)", fontSize: 13,
     fontFamily: "inherit", outline: "none",
     boxSizing: "border-box",
   };
   const labelStyle: React.CSSProperties = {
     fontSize: 11, fontWeight: 600,
     textTransform: "uppercase", letterSpacing: ".05em",
-    color: "#888888", display: "block", marginBottom: 6,
+    color: "var(--slate)", display: "block", marginBottom: 6,
   };
 
   return (
@@ -435,36 +434,52 @@ export default function TopNav({
               <div className="tn-name">{currentName}</div>
               <div className="tn-email">{userEmail}</div>
             </div>
-            <ChevronDown size={14} color="#888888" style={{ transform: dropOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+            <ChevronDown size={14} color="var(--slate)" style={{ transform: dropOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
           </button>
 
           {dropOpen && (
-  <div className="tn-dropdown">
-    <button className="tn-drop-item" onClick={() => { setDropOpen(false); setSettingsOpen(true); }}>
-      <Settings size={15} color="var(--slate)" strokeWidth={1.8} />
-      Impostazioni account
-    </button>
-    <button className="tn-drop-item" onClick={() => { setDropOpen(false); setChangelogOpen(true); }}>
-      <Sparkles size={15} color="var(--slate)" strokeWidth={1.8} />
-      Scopri le novità
-    </button>
-    <div className="tn-drop-divider" />
-    <div className="tn-dark-row">
-      <span className="tn-dark-label">{isDark ? "Dark mode" : "Light mode"}</span>
-      <button className={`tn-pill${isDark ? " on" : ""}`} onClick={() => setIsDark(v => !v)}>
-        <div className="tn-pill-thumb">
-          <div className="tn-ico-sun">...</div>
-          <div className="tn-ico-moon">...</div>
-        </div>
-      </button>
-    </div>
-    <div className="tn-drop-divider" />
-    <button className="tn-drop-item danger" onClick={handleLogout}>
-      <LogOut size={15} strokeWidth={1.8} />
-      Esci
-    </button>
-  </div>
-)}
+            <div className="tn-dropdown">
+              <button className="tn-drop-item" onClick={() => { setDropOpen(false); setSettingsOpen(true); }}>
+                <Settings size={15} color="var(--slate)" strokeWidth={1.8} />
+                Impostazioni account
+              </button>
+              <button className="tn-drop-item" onClick={() => { setDropOpen(false); setChangelogOpen(true); }}>
+                <Sparkles size={15} color="var(--slate)" strokeWidth={1.8} />
+                Scopri le novità
+              </button>
+              <div className="tn-drop-divider" />
+              <div className="tn-dark-row">
+                <span className="tn-dark-label">{isDark ? "Dark mode" : "Light mode"}</span>
+                <button className={`tn-pill${isDark ? " on" : ""}`} onClick={() => setIsDark(v => !v)}>
+                  <div className="tn-pill-thumb">
+                    <div className="tn-ico-sun">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="7" r="2.4" fill="#888"/>
+                        <line x1="7" y1="0.5" x2="7" y2="2.2" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="7" y1="11.8" x2="7" y2="13.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="0.5" y1="7" x2="2.2" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="11.8" y1="7" x2="13.5" y2="7" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="2.4" y1="2.4" x2="3.5" y2="3.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="10.5" y1="10.5" x2="11.6" y2="11.6" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="2.4" y1="11.6" x2="3.5" y2="10.5" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                        <line x1="10.5" y1="3.5" x2="11.6" y2="2.4" stroke="#888" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="tn-ico-moon">
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                        <path d="M11 7.8A4.8 4.8 0 016.2 3c0-.3.03-.59.08-.88A4.8 4.8 0 1011 7.8z" fill="#888"/>
+                      </svg>
+                    </div>
+                  </div>
+                </button>
+              </div>
+              <div className="tn-drop-divider" />
+              <button className="tn-drop-item danger" onClick={handleLogout}>
+                <LogOut size={15} strokeWidth={1.8} />
+                Esci
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -476,10 +491,10 @@ export default function TopNav({
             {/* Header */}
             <div className="tn-settings-header">
               <div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: "#111111", letterSpacing: "-.02em" }}>Impostazioni account</div>
-                <div style={{ fontSize: 12, color: "#888888", marginTop: 2 }}>{userEmail}</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "var(--ink)", letterSpacing: "-.02em" }}>Impostazioni account</div>
+                <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 2 }}>{userEmail}</div>
               </div>
-              <button onClick={() => setSettingsOpen(false)} style={{ width: 32, height: 32, borderRadius: 10, border: "none", background: "#F5F5F5", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#888888" }}>
+              <button onClick={() => setSettingsOpen(false)} style={{ width: 32, height: 32, borderRadius: 10, border: "none", background: "var(--light)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--slate)" }}>
                 <X size={15} />
               </button>
             </div>
@@ -518,10 +533,10 @@ export default function TopNav({
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#111111", marginBottom: 4 }}>Foto profilo</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>Foto profilo</div>
                       <button
                         onClick={() => fileRef.current?.click()}
-                        style={{ fontSize: 12, color: "#888888", border: "1px solid #EBEBEB", background: "#fff", borderRadius: 999, padding: "5px 12px", cursor: "pointer", fontFamily: "inherit" }}
+                        style={{ fontSize: 12, color: "var(--slate)", border: "1px solid #EBEBEB", background: "#fff", borderRadius: 999, padding: "5px 12px", cursor: "pointer", fontFamily: "inherit" }}
                       >
                         Cambia foto
                       </button>
@@ -545,7 +560,7 @@ export default function TopNav({
                   <button
                     onClick={handleSaveProfile}
                     disabled={isPending}
-                    style={{ padding: "11px", borderRadius: 999, border: "none", background: "#007782", color: "#ffffff", fontWeight: 700, fontSize: 13, cursor: isPending ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isPending ? .7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    style={{ padding: "11px", borderRadius: 999, border: "none", background: "#007782", color: "var(--white)", fontWeight: 700, fontSize: 13, cursor: isPending ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isPending ? .7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                   >
                     {isPending ? <><Loader size={13} style={{ animation: "spin 1s linear infinite" }} /> Salvataggio…</> : "Salva modifiche"}
                   </button>
@@ -555,8 +570,8 @@ export default function TopNav({
               {/* ── Email ── */}
               {activeTab === "email" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={{ fontSize: 13, color: "#888888", background: "#F5F5F5", borderRadius: 12, padding: "10px 14px" }}>
-                    Email attuale: <strong style={{ color: "#111111" }}>{userEmail}</strong>
+                  <div style={{ fontSize: 13, color: "var(--slate)", background: "var(--light)", borderRadius: 12, padding: "10px 14px" }}>
+                    Email attuale: <strong style={{ color: "var(--ink)" }}>{userEmail}</strong>
                   </div>
                   <div>
                     <label style={labelStyle}>Nuova email</label>
@@ -568,7 +583,7 @@ export default function TopNav({
                       placeholder="nuova@email.com"
                     />
                   </div>
-                  <div style={{ fontSize: 11, color: "#888888" }}>
+                  <div style={{ fontSize: 11, color: "var(--slate)" }}>
                     Ti verrà inviata una email di conferma al nuovo indirizzo.
                   </div>
 
@@ -578,7 +593,7 @@ export default function TopNav({
                   <button
                     onClick={handleSaveEmail}
                     disabled={isPending}
-                    style={{ padding: "11px", borderRadius: 999, border: "none", background: "#007782", color: "#ffffff", fontWeight: 700, fontSize: 13, cursor: isPending ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isPending ? .7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    style={{ padding: "11px", borderRadius: 999, border: "none", background: "#007782", color: "var(--white)", fontWeight: 700, fontSize: 13, cursor: isPending ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isPending ? .7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                   >
                     {isPending ? <><Loader size={13} style={{ animation: "spin 1s linear infinite" }} /> Salvataggio…</> : "Aggiorna email"}
                   </button>
@@ -615,7 +630,7 @@ export default function TopNav({
                   <button
                     onClick={handleSavePassword}
                     disabled={isPending}
-                    style={{ padding: "11px", borderRadius: 999, border: "none", background: "#007782", color: "#ffffff", fontWeight: 700, fontSize: 13, cursor: isPending ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isPending ? .7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    style={{ padding: "11px", borderRadius: 999, border: "none", background: "#007782", color: "var(--white)", fontWeight: 700, fontSize: 13, cursor: isPending ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isPending ? .7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                   >
                     {isPending ? <><Loader size={13} style={{ animation: "spin 1s linear infinite" }} /> Salvataggio…</> : "Cambia password"}
                   </button>

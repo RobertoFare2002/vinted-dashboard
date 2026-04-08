@@ -5,11 +5,11 @@ import { Package } from "lucide-react";
 
 const GRN = "#6bb800";
 const V   = "#007782";
-const INK = "#111111";
-const SL  = "#888888";
-const BD  = "#EBEBEB";
-const W   = "#ffffff";
-const LT  = "#F5F5F5";
+const INK = "var(--ink)";
+const SL  = "var(--slate)";
+const BD  = "var(--border)";
+const W   = "var(--white)";
+const LT  = "var(--light)";
 
 type SaleRow = {
   id?: string;
@@ -149,9 +149,9 @@ const VIEWS: { key: ViewKey; icon: string; title: string; heroBg: string; heroBo
 const MEDALS = ["🏆", "🥈", "🥉"];
 
 function Photo({ url, size }: { url: string | null; size: number }) {
-  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: size * 0.22, objectFit: "cover", flexShrink: 0, border: `0.5px solid ${BD}` }} />;
+  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: size * 0.22, objectFit: "cover", flexShrink: 0, border: `0.5px solid var(--border)` }} />;
   return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.22, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `0.5px solid ${BD}` }}>
+    <div style={{ width: size, height: size, borderRadius: size * 0.22, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `0.5px solid var(--border)` }}>
       <Package size={size * 0.35} color={SL} />
     </div>
   );
@@ -193,7 +193,7 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
     <>
       <style>{`
         .tpc-root {
-          background:${W}; border-radius:20px;
+          background:var(--white); border-radius:20px;
           box-shadow:0 4px 20px rgba(0,0,0,0.06);
           padding:18px 18px 14px;
           container-type: inline-size;
@@ -201,24 +201,24 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
         }
         .tpc-slide-in { animation: tpcSlideIn 0.4s cubic-bezier(.22,.68,0,1.2) both; }
         @keyframes tpcSlideIn { from { opacity:0; transform:translateX(-22px); } to { opacity:1; transform:translateX(0); } }
-        .tpc-title { font-size:13px; font-weight:700; color:${INK}; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+        .tpc-title { font-size:13px; font-weight:700; color:var(--ink); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
         .tpc-hero { border-radius:12px; padding:10px; margin-bottom:8px; border:0.5px solid transparent; }
         .tpc-hero-row { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
         .tpc-hero-left { display:flex; gap:8px; align-items:flex-start; min-width:0; flex:1; }
         .tpc-hero-info { min-width:0; flex:1; overflow:hidden; }
         .tpc-medal { font-size:10px; font-weight:700; margin-bottom:3px; }
-        .tpc-hero-name { font-size:13px; font-weight:700; color:${INK}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .tpc-hero-sub { font-size:10px; color:${SL}; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .tpc-hero-name { font-size:13px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .tpc-hero-sub { font-size:10px; color:var(--slate); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .tpc-hero-value { font-size:18px; font-weight:800; flex-shrink:0; letter-spacing:-.03em; }
         .tpc-r23 { }
         .tpc-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; }
         .tpc-row-left { display:flex; align-items:center; gap:8px; min-width:0; flex:1; overflow:hidden; }
         .tpc-row-info { min-width:0; flex:1; overflow:hidden; }
         .tpc-row-medal-name { display:flex; align-items:center; gap:4px; margin-bottom:2px; overflow:hidden; }
-        .tpc-row-name { font-size:12px; font-weight:600; color:${INK}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1; }
-        .tpc-row-sub { font-size:10px; color:${SL}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .tpc-row-name { font-size:12px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1; }
+        .tpc-row-sub { font-size:10px; color:var(--slate); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .tpc-row-value { font-size:12px; font-weight:700; flex-shrink:0; }
-        .tpc-divider { height:0.5px; background:${BD}; }
+        .tpc-divider { height:0.5px; background:var(--border); }
         .tpc-dots { display:flex; justify-content:center; align-items:center; gap:9px; margin-top:12px; }
         .tpc-dot { border-radius:50%; cursor:pointer; border:none; padding:0; transition:all .18s ease; }
 
