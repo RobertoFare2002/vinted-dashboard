@@ -41,19 +41,24 @@ export default function MobileHeader({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    // Scroll infinito bidirezionale:
-    // parte dalla metà così si può scorrere sia a destra che a sinistra
+    // Scroll infinito: parte dalla metà per poter scorrere in entrambe le direzioni
     const init = () => {
       const half = el.scrollWidth / 2;
       el.scrollLeft = half / 2;
     };
-    init();
+    // Aspetta che il layout sia pronto
+    requestAnimationFrame(() => { requestAnimationFrame(init); });
     const onScroll = () => {
       const half = el.scrollWidth / 2;
       if (el.scrollLeft >= half) {
+        // Salto istantaneo senza animazione: disabilita scroll-behavior temporaneamente
+        el.style.scrollBehavior = "auto";
         el.scrollLeft -= half;
+        el.style.scrollBehavior = "";
       } else if (el.scrollLeft <= 0) {
+        el.style.scrollBehavior = "auto";
         el.scrollLeft += half;
+        el.style.scrollBehavior = "";
       }
     };
     el.addEventListener("scroll", onScroll, { passive: true });
@@ -103,19 +108,22 @@ export default function MobileHeader({
         .mh-kpi-scroll {
           display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none;
           padding-bottom: 4px; -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
+          scroll-snap-type: x mandatory;
         }
         .mh-kpi-scroll::-webkit-scrollbar { display: none; }
         .mh-kpi-card {
-          background: #fff; border-radius: 18px;
+          background: var(--white, #fff); border-radius: 18px; transition: background .35s;
           padding: 22px 20px; flex-shrink: 0; width: calc(50vw - 28px);
           box-shadow: 0 2px 16px rgba(0,0,0,.09);
+          scroll-snap-align: start;
         }
         .mh-kpi-label {
-          font-size: 10px; font-weight: 600; color: #888;
+          font-size: 10px; font-weight: 600; color: var(--slate, #888); transition: color .25s;
           text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px;
         }
         .mh-kpi-val {
-          font-size: 26px; font-weight: 800; color: #111;
+          font-size: 26px; font-weight: 800; color: var(--ink, #111); transition: color .25s;
           letter-spacing: -.03em; line-height: 1;
         }
         .mh-kpi-sub { font-size: 10px; font-weight: 600; margin-top: 5px; }
@@ -165,7 +173,7 @@ export default function MobileHeader({
         {/* Greeting + profit */}
         <div className="mh-greeting">{greeting},</div>
         <div style={{ color: "#fff", fontSize: 20, fontWeight: 800, letterSpacing: "-.02em", marginBottom: 12 }}>{firstName}</div>
-        <div className="mh-profit-label">{selectedProfileId ? "Profitto profilo" : "Profitto totale all time"}</div>
+        <div className="mh-profit-label">Profitto totale all time</div>
         <div className="mh-profit-val">€{fmt(allTimeProfit)}</div>
         <div className="mh-profit-sub">
           <span className="mh-delta">+{allTimeMargin}%</span>

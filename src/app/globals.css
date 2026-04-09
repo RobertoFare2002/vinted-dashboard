@@ -19,6 +19,7 @@
   --red:         #FF4D4D;
   --amber:       #F5A623;
   --blue:        #3b82f6;
+  --dot-inactive: rgba(0,0,0,0.22);
 
   --font: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
@@ -146,16 +147,16 @@ html, body {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 290px;
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
   height: 100%;
 }
-.fx-left  { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; height: 100%; }
-.fx-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; height: 100%; }
-.fx-chart { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: visible; height: 100%; }
+.fx-left  { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow-y: auto; overflow-x: hidden; height: 100%; }
+.fx-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow-y: auto; overflow-x: hidden; height: 100%; padding-bottom: 24px; box-sizing: border-box; }
+.fx-chart { display: flex; flex-direction: column; gap: 14px; min-width: 0; overflow: hidden; height: 100%; }
 
 /* 3 col, stretto: colonna destra più compatta → mostra solo top 1 nella classifica */
 @media (max-width: 1480px) and (min-width: 1201px) {
@@ -180,9 +181,8 @@ html, body {
   padding: 24px 24px 24px;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: #F5F5F5;
+  overflow: hidden;
+  background: var(--light);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -200,6 +200,12 @@ html, body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.fx-grid-wrap > .fx-grid {
+  flex: 1;
+  min-height: 0;
 }
 @media (max-width: 1280px) { .shell-main { padding: 18px 18px 18px; } }
 @media (max-width: 1060px) { .shell-main { padding: 16px 14px 16px; } }
@@ -208,9 +214,13 @@ html, body {
 
 /* ── MOBILE LAYOUT (<= 860px) ── */
 @media (max-width: 860px) {
-  /* hide ALL scrollbars on mobile */
+  /* hide scrollbars on mobile except inner lists */
   * { scrollbar-width: none !important; }
   *::-webkit-scrollbar { display: none !important; }
+  .fx-mobile-list { scrollbar-width: thin !important; }
+  .fx-mobile-list::-webkit-scrollbar { display: block !important; width: 3px !important; }
+  .fx-recent-scroll { scrollbar-width: thin !important; }
+  .fx-recent-scroll::-webkit-scrollbar { display: block !important; width: 3px !important; }
 
   /* shell-main: bloccato su mobile, niente scroll esterno */
   .shell-main {
@@ -218,7 +228,7 @@ html, body {
     flex: 1;
     min-height: 0;
     overflow: hidden !important;
-    background: #F5F5F5;
+    background: var(--light);
     height: 100% !important;
     max-height: 100% !important;
     display: flex !important;
@@ -236,47 +246,84 @@ html, body {
   }
   /* desktop greeting hidden on mobile */
   .desktop-greeting { display: none !important; }
-  /* grid wrap: scrolls internally, no visible scrollbar */
+  /* grid wrap: NON scrolla — layout fisso in altezza, scroll solo nella lista interna */
   .fx-grid-wrap {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     user-select: none;
-    scrollbar-width: none;
-    padding: 12px 12px 80px;
+    padding: 12px 12px 0;
     display: flex;
     flex-direction: column;
   }
-  .fx-grid-wrap::-webkit-scrollbar { display: none; }
   /* spacing between kpi cards and content below */
   .mh-kpi-wrap { margin-bottom: 6px; }
-  /* mobile grid: single col, no fixed height */
+  /* mobile grid: colonna singola, si espande per riempire lo spazio */
   .fx-grid {
-    height: auto !important;
-    overflow: visible !important;
+    flex: 1;
+    min-height: 0;
+    height: 100% !important;
+    overflow: hidden !important;
     gap: 4px;
+    display: flex !important;
+    flex-direction: column !important;
   }
   .fx-right {
-    height: auto !important;
+    flex: 1;
+    min-height: 0;
+    height: 100% !important;
     overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px;
+    padding-bottom: 80px;
+    width: 100%;
+    box-sizing: border-box;
   }
-  /* le card tornano al loro overflow normale */
-  /* (rimossa la regola overflow: visible che allungava la tabella) */
-  /* recent activity: altezza limitata con scroll interno come prima */
+  /* pill tab: occupa tutta la larghezza disponibile */
+  .mobile-view-toggle {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .mobile-view-toggle > div {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* recent activity: cresce per riempire lo spazio, scroll interno */
   .fx-recent-scroll {
-    max-height: 340px !important;
+    max-height: none !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,.12) transparent !important;
   }
+  .fx-recent-scroll::-webkit-scrollbar { display: block !important; width: 3px !important; }
+  .fx-recent-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12) !important; border-radius: 4px !important; }
   /* hide search bar, title row, date col, acquisto col, profilo col, margine% col on mobile */
   .fx-mobile-hide { display: none !important; }
   /* mobile table: cleaner rows */
   .fx-table td { padding: 11px 8px !important; }
   .fx-table th { padding: 8px 8px !important; }
+
+  /* ── Fix: fx-card su mobile non deve espandersi né clippare ── */
+  .fx-right .fx-card {
+    overflow: visible !important;
+    padding: 16px !important;
+    flex: 0 0 auto !important;
+  }
+  /* ── Fix: flex-shrink:0 on all non-growing elements in fx-right ── */
+  .mobile-flex-header { flex-shrink: 0 !important; }
+  /* ── Fix: the fx-grid needs overflow visible so fx-right can scroll inside ── */
+  .fx-grid { overflow: visible !important; }
+  /* ── Fix: mobile list wrap deve rispettare la larghezza del contenitore ── */
+  .fx-mobile-list-wrap,
+  .fx-mobile-list {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 }
 
 /* mobile-hide: visible on desktop, hidden on mobile */
@@ -298,16 +345,25 @@ html, body {
     display: flex !important;
     flex-direction: column;
     gap: 0;
-    max-height: 222px;
+    flex-shrink: 0;
+    min-height: 0;
+    max-height: 234px;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     user-select: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,.12) transparent;
   }
+  .fx-mobile-list::-webkit-scrollbar { display: block !important; width: 3px; }
+  .fx-mobile-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 4px; }
   .fx-mobile-list-wrap {
     position: relative;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
   }
   .fx-mobile-list-wrap::after {
     content: "";
@@ -330,7 +386,7 @@ html, body {
 /* ── MOBILE HEADER visibility ── */
 .mobile-header-wrap { display: none; }
 @media (max-width: 860px) {
-  .mobile-header-wrap { display: block; }
+  .mobile-header-wrap { display: block; flex-shrink: 0; }
 }
 
 /* ── TABLE RESPONSIVE COLUMNS ── */
@@ -365,6 +421,7 @@ html.dark {
   --green-light: #9de800;
   --green-bg:    rgba(107,184,0,.15);
   --green-bg2:   rgba(107,184,0,.10);
+  --dot-inactive: rgba(255,255,255,0.35);
 }
 
 /* ── Body e sfondo pagina ── */
@@ -466,6 +523,9 @@ html.dark .lp-icon-amber  { background: rgba(245,166,35,.2) !important; }
 html.dark .lp-backdrop    { background: rgba(0,0,0,.6) !important; }
 
 /* ── Gradient dissolvenza lista mobile ── */
+html.dark .fx-mobile-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15) !important; }
+html.dark .fx-recent-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15) !important; }
+
 html.dark .fx-mobile-list-wrap::after {
   background: linear-gradient(to bottom, transparent, rgba(17,17,19,0.96)) !important;
 }

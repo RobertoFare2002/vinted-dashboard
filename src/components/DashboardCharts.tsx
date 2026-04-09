@@ -177,22 +177,6 @@ function CashFlowInChart({ kpi }: { kpi: Props["kpi"] }) {
   return (
     <div className="fx-card cfc-root">
       <style>{`
-        :root {
-          --dc-bg:    #ffffff;
-          --dc-ink:   #111111;
-          --dc-sl:    #888888;
-          --dc-bd:    #EBEBEB;
-          --dc-lt:    #F5F5F5;
-          --dc-hover: #F5F5F5;
-        }
-        html.dark {
-          --dc-bg:    #1e1e20;
-          --dc-ink:   #f0f0f0;
-          --dc-sl:    rgba(255,255,255,.45);
-          --dc-bd:    rgba(255,255,255,.10);
-          --dc-lt:    #27272a;
-          --dc-hover: rgba(255,255,255,.07);
-        }
         .cfc-root { container-type: inline-size; container-name: cfc; }
         .cfc-saldo { font-weight: 700; line-height: 1; margin-bottom: 4px; font-size: 40px; }
         @container cfc (max-width: 240px) { .cfc-saldo { font-size: 28px; } }
@@ -284,14 +268,29 @@ export default function DashboardCharts({
   }, []);
   const { INK, SL, BD, LT, W } = getDarkVars(darkMode);
 
-  const openCtxMenu = (id: string, type: "sale" | "stock", el: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
-    const MENU_H = type === "sale" ? 188 : 216;
+  const openCtxMenu = (id: string, type: "sale" | "stock", el: HTMLElement, mousePos?: { x: number; y: number }) => {
+    const MENU_H = type === "sale" ? 200 : 230;
     const TAB_BAR = 80;
-    const spaceBelow = window.innerHeight - rect.bottom - TAB_BAR;
-    const openAbove = spaceBelow < MENU_H && rect.top > MENU_H;
-    const top = openAbove ? rect.top - MENU_H - 6 : rect.bottom + 6;
-    const right = Math.max(8, window.innerWidth - rect.right);
+    const MARGIN = 10;
+    const MENU_W = 220;
+    let top: number, right: number;
+    if (mousePos) {
+      const spaceBelow = window.innerHeight - mousePos.y - TAB_BAR;
+      top = spaceBelow < MENU_H ? mousePos.y - MENU_H - 6 : mousePos.y + 6;
+      const rightRaw = window.innerWidth - mousePos.x;
+      right = Math.min(rightRaw, window.innerWidth - MENU_W - 8);
+    } else {
+      const rect = el.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - TAB_BAR;
+      const openAbove = spaceBelow < MENU_H && rect.top > MENU_H;
+      top = openAbove ? rect.top - MENU_H - 6 : rect.bottom + 6;
+      const maxTop = window.innerHeight - TAB_BAR - MENU_H - MARGIN;
+      top = Math.min(maxTop, Math.max(MARGIN, top));
+      const rightRaw = Math.max(8, window.innerWidth - rect.right);
+      right = Math.min(rightRaw, window.innerWidth - MENU_W - 8);
+    }
+    top = Math.min(window.innerHeight - MENU_H - MARGIN, Math.max(MARGIN, top));
+    right = Math.max(8, right);
     setCtxPos({ top, right });
     setCtxMenuId(id);
     setCtxMenuType(type);
@@ -300,9 +299,14 @@ export default function DashboardCharts({
   const closeCtxMenu = () => { setCtxMenuId(null); setCtxMenuType(null); setCtxPos(null); };
 
   const makeLongPressHandlers = (id: string, type: "sale" | "stock") => ({
+    onTouchStart: (e: React.TouchEvent) => {
+      const el = e.currentTarget as HTMLElement;
+      longPressTimer.current = setTimeout(() => openCtxMenu(id, type, el), 500);
+    },
+    onTouchEnd:   () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } },
+    onTouchMove:  () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } },
     onPointerDown: (e: React.PointerEvent) => {
-      if (e.pointerType === "mouse") return;
-      e.preventDefault();
+      if (e.pointerType !== "mouse") return;
       const el = e.currentTarget as HTMLElement;
       longPressTimer.current = setTimeout(() => openCtxMenu(id, type, el), 500);
     },
@@ -315,11 +319,12 @@ export default function DashboardCharts({
   const [period, setPeriod] = useState<PeriodState>({ view: "month", monthOffset: 0, yearOffset: 0 });
   const handlePeriodChange = useCallback((p: PeriodState) => setPeriod(p), []);
 
-  // Sales filtered by the selected period (uses allSales so past years are included)
+  // Sales filtered by the selected period + profile (uses allSales so past years are included)
   const periodFilteredSales = useMemo(() => {
     const now = new Date();
     return allSales.filter(s => {
       if (!s.transaction_date) return false;
+      if (selectedProfileId && s.profile_id !== selectedProfileId) return false;
       const d = new Date(s.transaction_date);
       if (period.view === "week") {
         const diff = (now.getTime() - d.getTime()) / 86400000;
@@ -332,7 +337,7 @@ export default function DashboardCharts({
       // year
       return d.getFullYear() === now.getFullYear() + period.yearOffset;
     });
-  }, [allSales, period]);
+  }, [allSales, period, selectedProfileId]);
 
   // Track window width to show/hide chart column content inline
   // Attach non-passive touchstart to prevent text selection on long press
@@ -420,6 +425,23 @@ export default function DashboardCharts({
   return (
     <>
       <style>{`
+
+        :root {
+          --dc-bg:    #ffffff;
+          --dc-ink:   #111111;
+          --dc-sl:    #888888;
+          --dc-bd:    #EBEBEB;
+          --dc-lt:    #F5F5F5;
+          --dc-hover: #F5F5F5;
+        }
+        html.dark {
+          --dc-bg:    #1e1e20;
+          --dc-ink:   #f0f0f0;
+          --dc-sl:    rgba(255,255,255,.45);
+          --dc-bd:    rgba(255,255,255,.10);
+          --dc-lt:    #27272a;
+          --dc-hover: rgba(255,255,255,.07);
+        }
 
         .fx-card {
           background: var(--dc-bg);
@@ -596,6 +618,7 @@ export default function DashboardCharts({
           overflow-y: auto;
           scrollbar-width: thin;
           scrollbar-color: rgba(0,0,0,.08) transparent;
+          min-height: calc(100vh - 380px);
         }
         .fx-recent-scroll::-webkit-scrollbar { width: 4px; }
         .fx-recent-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -625,9 +648,9 @@ export default function DashboardCharts({
           background: var(--dc-ink); color: var(--dc-bg);
         }
         .fx-tab-inactive {
-          background: var(--dc-lt); color: var(--dc-sl); border: none !important;
+          background: transparent; color: var(--dc-sl); border: none !important;
         }
-        .fx-tab-inactive:hover { background: var(--dc-lt); color: var(--dc-ink); }
+        .fx-tab-inactive:hover { background: rgba(0,0,0,.06); color: var(--dc-ink); }
         .fx-stock-filter-pill {
           padding: 4px 14px; border-radius: 999px; font-size: 11px; font-weight: 600;
           cursor: pointer; border: 1px solid transparent; transition: all .15s;
@@ -772,7 +795,7 @@ export default function DashboardCharts({
         }
         .lp-row-active .lp-row-inner {
           background: rgba(0,119,130,0.06);
-          border: 2px solid #ffffff;
+          border: 2px solid var(--primary);
           border-radius: 12px;
           margin: 4px 0;
           box-shadow: 0 2px 12px rgba(0,119,130,0.15);
@@ -786,7 +809,8 @@ export default function DashboardCharts({
           background: #ffffff;
           border: 0.5px solid rgba(0,0,0,0.12);
           border-radius: 16px;
-          min-width: 210px;
+          min-width: 220px;
+          max-width: calc(100vw - 16px);
           z-index: 9999;
           overflow: hidden;
           box-shadow: 0 8px 32px rgba(0,0,0,0.14);
@@ -860,7 +884,7 @@ export default function DashboardCharts({
             </div>
 
             {/* Toggle Vendite / Magazzino */}
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", background: darkMode ? "rgba(255,255,255,.10)" : "rgba(0,0,0,.07)", borderRadius: 999, padding: 3 }}>
               <button
                 className={`fx-tab-btn ${activeView === "vendite" ? "fx-tab-active-vendite" : "fx-tab-inactive"}`}
                 onClick={() => { setActiveView("vendite"); setViewAnimKey(k => k + 1); }}
@@ -958,7 +982,7 @@ export default function DashboardCharts({
 
           {/* ── VISTA VENDITE ── */}
           {activeView === "vendite" && (
-            <>
+            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 0 }}>
               {/* Spotlight */}
               <div key={`spot-${viewAnimKey}`} className="fx-up-0 mobile-hide" style={{ flexShrink: 0 }}>
               <div className="fx-card" style={{ textAlign: "center" }}>
@@ -1168,7 +1192,15 @@ export default function DashboardCharts({
                           const profColorIdx = profName.split("").reduce((a: number, c: string) => a + c.charCodeAt(0), 0) % profColors.length;
                           const profColor = profColors[profColorIdx];
                           return (
-                            <tr key={sale.id || i}>
+                            <tr
+                              key={sale.id || i}
+                              style={{ cursor: "pointer" }}
+                              onClick={(e) => {
+                                const sId = sale.id ?? "";
+                                if (ctxMenuId === sId) { closeCtxMenu(); return; }
+                                openCtxMenu(sId, "sale", e.currentTarget as HTMLElement, { x: e.clientX, y: e.clientY });
+                              }}
+                            >
                               <td style={{ fontSize: 12, color: SL, whiteSpace: "nowrap" }}>{dateStr}</td>
                               <td>
                                 <div className="fx-prof-cell">
@@ -1206,7 +1238,7 @@ export default function DashboardCharts({
                                 <span
                                   className={isOpen ? "fx-pill-open" : "fx-pill-done"}
                                   style={{ opacity: statusFilter && statusFilter !== (sale.status || "open") ? 0.4 : 1, transition: "opacity .15s" }}
-                                  onClick={() => setStatusFilter(statusFilter === (sale.status || "open") ? null : (sale.status || "open"))}
+                                  onClick={(e) => { e.stopPropagation(); setStatusFilter(statusFilter === (sale.status || "open") ? null : (sale.status || "open")); }}
                                 >
                                   <span className="fx-pill-dot" style={{ background: isOpen ? "#f5a623" : "#6bb800" }} />
                                   {isOpen ? "In sospeso" : "Completato"}
@@ -1216,7 +1248,7 @@ export default function DashboardCharts({
                                 <div style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: INK }}>€{fmt(amount)}</div>
                                 <div
                                   style={{ fontSize: 11, fontWeight: 600, marginTop: 2, color: marginAbs >= 0 ? "#6bb800" : RED, fontVariantNumeric: "tabular-nums", cursor: "pointer" }}
-                                  onClick={() => setShowPctMargin(v => !v)}
+                                  onClick={(e) => { e.stopPropagation(); setShowPctMargin(v => !v); }}
                                 >
                                   {showPctMargin
                                     ? `${marginPct >= 0 ? "▲" : "▼"} ${Math.abs(marginPct)}%`
@@ -1233,14 +1265,14 @@ export default function DashboardCharts({
                 </div>
               </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* ── VISTA MAGAZZINO ── */}
           {activeView === "magazzino" && (
-            <>
+            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 0 }}>
               {/* Tabella Stock Magazzino */}
-              <div key={`stock-${viewAnimKey}`} className="fx-up-0">
+              <div key={`stock-${viewAnimKey}`} className="fx-up-0" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
 
                 {/* Header mobile: fuori dalla card */}
                 <div className="mobile-flex-header" style={{ marginBottom: 8, padding: "0 2px" }}>
@@ -1262,7 +1294,7 @@ export default function DashboardCharts({
                   </div>
                 </div>
 
-              <div className="fx-card">
+              <div className="fx-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
                 {/* Header desktop: dentro la card */}
                 <div className="mobile-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Stock Magazzino</div>
@@ -1359,22 +1391,22 @@ export default function DashboardCharts({
                 </div>
 
                 {/* ── DESKTOP stock table ── */}
-                <div className="fx-recent-scroll mobile-hide" style={{ maxHeight: 480 }}>
+                <div className="fx-recent-scroll mobile-hide" style={{ flex: 1, minHeight: 0 }}>
                   <table className="fx-table" style={{ tableLayout: "fixed", width: "100%" }}>
                     <colgroup>
-                      <col style={{ width: "35%" }} />
-                      <col className="fx-col-hide-md" style={{ width: "12%" }} />
-                      <col className="fx-col-hide-md" style={{ width: "18%" }} />
-                      <col style={{ width: "20%" }} />
-                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "40%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "18%" }} />
+                      <col style={{ width: "18%" }} />
                     </colgroup>
                     <thead>
                       <tr>
                         <th>Articolo</th>
-                        <th className="fx-col-hide-md" style={{ textAlign: "center" }}>Taglia</th>
-                        <th className="fx-col-hide-md" style={{ textAlign: "center" }}>Costo</th>
-                        <th style={{ textAlign: "center" }}>Prezzo</th>
-                        <th style={{ textAlign: "center" }}>Giorni</th>
+                        <th style={{ textAlign: "center" }}>Taglia</th>
+                        <th style={{ textAlign: "right" }}>Costo</th>
+                        <th style={{ textAlign: "right" }}>Prezzo</th>
+                        <th style={{ textAlign: "right" }}>Giorni</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1394,52 +1426,58 @@ export default function DashboardCharts({
                             ? Math.floor((nowTs - new Date(item.purchased_at).getTime()) / 86400000)
                             : null;
                           const isStale = days !== null && days > 60;
+                          const stockId = item.id ?? "";
 
                           return (
-                            <tr key={item.id || i}>
-                              <td className="fx-td-main" style={{ maxWidth: 0, position: "relative" }}>
+                            <tr
+                              key={item.id || i}
+                              style={{ cursor: "pointer" }}
+                              onClick={(e) => {
+                                if (ctxMenuId === stockId) { closeCtxMenu(); return; }
+                                openCtxMenu(stockId, "stock", e.currentTarget as HTMLElement, { x: e.clientX, y: e.clientY });
+                              }}
+                            >
+                              <td style={{ maxWidth: 0 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
                                   {photoUrl ? (
-                                    <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "none" }} />
+                                    <img src={photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
                                   ) : (
-                                    <div style={{ width: 36, height: 36, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "none" }}>
+                                    <div style={{ width: 36, height: 36, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                       <Package size={14} color={SL} />
                                     </div>
                                   )}
-                                  <div className="fx-td-main-inner">
-                                    <span className="fx-td-main-name">
-                                      {(item.name || "Articolo").slice(0, 40)}
-                                    </span>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, color: INK }}>
+                                      {item.name || "Articolo"}
+                                    </div>
+                                    {isStale && (
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: AMB, background: darkMode ? "rgba(245,166,35,.18)" : "#fef3c7", padding: "1px 6px", borderRadius: 999, display: "inline-block", marginTop: 2 }}>
+                                        clearance
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
-                                <span className="fx-tooltip-wrap">
-                                  <span className="fx-tooltip">{item.name || "Articolo"}</span>
-                                </span>
                               </td>
-                              <td className="fx-col-hide-md" style={{ fontSize: 12, color: SL, textAlign: "center" }}>
-                                {item.size || "—"}
+                              <td style={{ fontSize: 12, color: SL, textAlign: "center" }}>{item.size || "—"}</td>
+                              <td style={{ textAlign: "right", fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
+                                {cost > 0 ? `€${fmt(cost)}` : "—"}
                               </td>
-                              <td className="fx-col-hide-md" style={{ textAlign: "center" }}>
-                                <div style={{ fontSize: 13, color: SL, fontVariantNumeric: "tabular-nums" }}>
-                                  {cost > 0 ? `€${fmt(cost)}` : "—"}
-                                </div>
-                              </td>
-                              <td style={{ textAlign: "center" }}>
-                                <div style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: INK }}>
+                              <td style={{ textAlign: "right" }}>
+                                <div style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: INK, fontSize: 13 }}>
                                   {price > 0 ? `€${fmt(price)}` : "—"}
                                 </div>
                                 {price > 0 && cost > 0 && (
-                                  <div style={{ fontSize: 11, fontWeight: 600, color: marginAbs >= 0 ? "#6bb800" : RED, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 600, color: marginAbs >= 0 ? "#6bb800" : RED, fontVariantNumeric: "tabular-nums", marginTop: 1 }}>
                                     {marginAbs >= 0 ? "+" : ""}€{fmt(marginAbs)}
                                   </div>
                                 )}
                               </td>
-                              <td style={{ textAlign: "center" }}>
+                              <td style={{ textAlign: "right" }}>
                                 {days !== null && (
                                   <span style={{
-                                    fontSize: 10, fontWeight: 600,
-                                    padding: "2px 8px", borderRadius: 999,
-                                    background: isStale ? "#fef3c7" : LT,
+                                    fontSize: 11, fontWeight: 600,
+                                    padding: "3px 8px", borderRadius: 999,
+                                    background: isStale ? (darkMode ? "rgba(245,166,35,.18)" : "#fef3c7") : LT,
                                     color: isStale ? AMB : SL,
                                     display: "inline-flex", alignItems: "center", gap: 3,
                                   }}>
@@ -1459,7 +1497,7 @@ export default function DashboardCharts({
 
               </div>
 
-            </>
+            </div>
           )}
 
           {/* 3 card sotto attività recenti — desktop only */}
@@ -1513,14 +1551,14 @@ export default function DashboardCharts({
               <div key={`vendite-${viewAnimKey}-2`} className="fx-stagger-2"><TopProductsCard sales={allSales} photoMap={photoMap} stockItems={stockItems} selectedProfileId={selectedProfileId} /></div>
             </>
           ) : (
-            <>
-              <div key={`magazzino-${viewAnimKey}-0`} className="fx-stagger-0"><ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} /></div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0, height: "100%" }}>
+              <div key={`magazzino-${viewAnimKey}-0`} className="fx-stagger-0" style={{ flexShrink: 0 }}><ConversionRateCard sold={allClosedSales} pending={allPendingSales} available={stockCount} staleItems={staleItems} /></div>
               {(() => {
                 const staleList = stockItems
                   .filter(i => i.status === "available" && i.purchased_at && Math.floor((nowTs - new Date(i.purchased_at).getTime()) / 86400000) > 60)
                   .sort((a, b) => new Date(a.purchased_at!).getTime() - new Date(b.purchased_at!).getTime());
                 return (
-                  <div key={`magazzino-${viewAnimKey}-1`} className="fx-stagger-1 fx-card">
+                  <div key={`magazzino-${viewAnimKey}-1`} className="fx-stagger-1 fx-card" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                       <div style={{ fontSize: 16, fontWeight: 700, color: INK }}>Clearance</div>
                       {staleList.length > 0 && (
@@ -1530,7 +1568,7 @@ export default function DashboardCharts({
                     {staleList.length === 0 ? (
                       <div style={{ padding: "24px 0", fontSize: 13, color: SL, textAlign: "center" }}>Nessun articolo fermo da più di 60 giorni</div>
                     ) : (
-                      <div className="fx-recent-scroll" style={{ maxHeight: 320, overflowX: "hidden" }}>
+                      <div className="fx-recent-scroll" style={{ flex: 1, minHeight: 0, overflowX: "hidden" }}>
                       <table className="fx-table" style={{ tableLayout: "fixed", width: "100%" }}>
                           <colgroup>
                             <col style={{ width: 44 }} />
@@ -1582,7 +1620,7 @@ export default function DashboardCharts({
                   </div>
                 );
               })()}
-            </>
+            </div>
           )}
         </div>
       </div>
