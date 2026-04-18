@@ -340,14 +340,7 @@ export default function DashboardCharts({
   }, [allSales, period, selectedProfileId]);
 
   // Track window width to show/hide chart column content inline
-  // Attach non-passive touchstart to prevent text selection on long press
-  useEffect(() => {
-    const handler: EventListener = (e) => { e.preventDefault(); };
-    const opts: AddEventListenerOptions = { passive: false };
-    const refs = [salesListRef.current, stockListRef.current];
-    refs.forEach(el => el?.addEventListener("touchstart", handler, opts));
-    return () => refs.forEach(el => el?.removeEventListener("touchstart", handler, opts));
-  }, []);
+  // (touch-action: pan-y + user-select: none on rows handles long-press without blocking iOS scroll)
 
   // Start with false to avoid hydration mismatch (server doesn't know window width)
   const [showChartInline, setShowChartInline] = useState<boolean>(false);

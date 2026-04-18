@@ -137,8 +137,8 @@ export default async function StockPage() {
   const availableItems = items.filter(i => i.status === "available");
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
+    <div className="page-scroll">
+      <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "var(--ink)", letterSpacing: "-.03em" }}>Magazzino</h1>
         <p style={{ color: "var(--slate)", fontSize: 13, margin: 0 }}>
           {availableItems.length} articoli disponibili

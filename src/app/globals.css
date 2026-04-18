@@ -297,6 +297,8 @@ html, body {
     max-height: none !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
     scrollbar-width: thin !important;
     scrollbar-color: rgba(0,0,0,.12) transparent !important;
   }
@@ -324,6 +326,36 @@ html, body {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+  }
+}
+
+/* ── Page scroll wrapper — Vendite, Magazzino (e simili) ── */
+/* Desktop: shell-main fornisce già padding 24px + overflow-y: auto          */
+/* Mobile:  shell-main ha padding:0 + overflow:hidden → serve il wrapper     */
+.page-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+@media (max-width: 860px) {
+  .page-scroll { padding: 16px 14px 90px; }
+}
+
+/* ── KPI grid 4 colonne → 2×2 su mobile ── */
+.kpi-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+@media (max-width: 860px) {
+  .kpi-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
   }
 }
 

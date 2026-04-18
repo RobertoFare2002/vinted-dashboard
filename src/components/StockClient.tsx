@@ -402,7 +402,7 @@ export default function StockClient({ initialItems, photoMap, profileMap, profil
       )}
 
       {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+      <div className="kpi-grid-4">
         {[
           { label: "Disponibili", value: String(available.reduce((s, i) => s + Number(i.quantity ?? 1), 0)), color: "#6bb800" },
           { label: "In sospeso",  value: String(reserved.length),   color: AMB },

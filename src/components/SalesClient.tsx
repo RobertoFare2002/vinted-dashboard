@@ -127,7 +127,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
       )}
 
       {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 18 }}>
+      <div className="kpi-grid-4">
         {[
           { label: "Ricavi",     value: `€${fmt(revenue)}`, color: "#6bb800" },
           { label: "Costi",      value: `€${fmt(costs)}`,   color: RED },
