@@ -392,21 +392,34 @@ html, body {
     gap: 0;
     flex-shrink: 0;
     min-height: 0;
-    /* no max-height: the page scrolls via shell-main */
-    overflow-y: visible;
+    max-height: 280px;
+    overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     user-select: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,.12) transparent;
   }
+  .fx-mobile-list::-webkit-scrollbar { display: block !important; width: 3px; }
+  .fx-mobile-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 4px; }
   .fx-mobile-list-wrap {
     position: relative;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
   }
-  /* no fade-out gradient since page scrolls (no clipping) */
-  .fx-mobile-list-wrap::after { display: none; }
+  .fx-mobile-list-wrap::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 36px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.92));
+    pointer-events: none;
+    border-radius: 0 0 16px 16px;
+  }
   /* tab bar sizing */
   .mtb-root {
     padding: 10px 0 max(16px, env(safe-area-inset-bottom)) !important;
@@ -563,7 +576,9 @@ html.dark .lp-backdrop    { background: rgba(0,0,0,.6) !important; }
 html.dark .fx-mobile-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15) !important; }
 html.dark .fx-recent-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15) !important; }
 
-html.dark .fx-mobile-list-wrap::after { display: none !important; }
+html.dark .fx-mobile-list-wrap::after {
+  background: linear-gradient(to bottom, transparent, rgba(17,17,19,0.96)) !important;
+}
 
 /* ── KPI card mobile (sopra header verde, rimane bianca) ── */
 html.dark .mh-kpi-card { background: #1e1e20 !important; }
