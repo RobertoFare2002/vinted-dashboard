@@ -14,6 +14,7 @@ const TABS = [
   { href: "/sales",     label: "Vendite" },
   { href: "/stock",     label: "Magazzino" },
   { href: "/templates", label: "Template" },
+  { href: "/feed",      label: "Feed" },
 ];
 
 // ── Server actions inline via Supabase client ─────────────────────────────────

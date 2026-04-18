@@ -1077,7 +1077,7 @@ export default function DashboardCharts({
                     const cost   = Number(sale.cost ?? 0);
                     const marginAbs = amount - cost;
                     const photoUrl = sale.template_id_ext ? photoMap[sale.template_id_ext] : null;
-                    const prof = profiles.find((p: any) => p.id === sale.profile_id);
+                    const prof = profiles.find((p: any) => p.id === sale.profile_id || p.name === sale.profile_id);
                     const saleId = sale.id ?? "";
                     const isCtxOpen = ctxMenuId === saleId && ctxMenuType === "sale";
                     const isOpen = sale.status === "open" || !sale.status;
@@ -1185,7 +1185,7 @@ export default function DashboardCharts({
                           const marginAbs = amount - cost;
                           const marginPct = cost > 0 ? Math.round(((amount - cost) / cost) * 100) : 0;
                           const photoUrl = sale.template_id_ext ? photoMap[sale.template_id_ext] : null;
-                          const prof = profiles.find((p: any) => p.id === sale.profile_id);
+                          const prof = profiles.find((p: any) => p.id === sale.profile_id || p.name === sale.profile_id);
                           const profName = prof?.name ?? "—";
                           const profInitial = profName.charAt(0).toUpperCase();
                           const profColors = ["#007782","#9b59b6","#e67e22","#2980b9","#27ae60"];

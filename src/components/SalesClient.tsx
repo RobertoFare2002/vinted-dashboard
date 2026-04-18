@@ -4,6 +4,9 @@ import { useState, useMemo, useTransition } from "react";
 import { deleteSale, changeSaleStatus } from "@/app/(dashboard)/sales/actions";
 import { cancelSale, concludeSale } from "@/app/(dashboard)/stock/actions";
 import SaleModal from "@/components/SaleModal";
+import dynamic from "next/dynamic";
+
+const CreatePostModal = dynamic(() => import("@/components/CreatePostModal"), { ssr: false });
 
 type SaleRow = {
   id: string; buyer_seller: string | null; amount: number | null; cost: number | null;
@@ -24,11 +27,11 @@ const G   = "#007782";
 const GBG = "#f0fad0";
 const RED = "#FF4D4D";
 const AMB = "#F5A623";
-const INK = "#111111";
-const SL  = "#888888";
-const BD  = "#EBEBEB";
-const LT  = "#F5F5F5";
-const W   = "#ffffff";
+const INK = "var(--ink)";
+const SL  = "var(--slate)";
+const BD  = "var(--border)";
+const LT  = "var(--light)";
+const W   = "var(--white)";
 
 const STATUS_META: Record<string, { label: string; dot: string; color: string; bg: string }> = {
   open:   { label: "In sospeso", dot: AMB,      color: AMB,      bg: "#fef3c7" },
@@ -41,6 +44,7 @@ function fmt(n: number) {
 
 export default function SalesClient({ initialSales, templates, photoMap, profileMap, profiles }: Props) {
   const [modal, setModal]               = useState<{ mode: "add" | "edit"; sale?: SaleRow } | null>(null);
+  const [publishSale, setPublishSale]   = useState<SaleRow | null>(null);
   const [filter, setFilter]             = useState<"all" | "open" | "closed">("all");
   const [search, setSearch]             = useState("");
   const [isPending, startTransition]    = useTransition();
@@ -78,6 +82,20 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
 
   return (
     <>
+      {publishSale && (
+        <CreatePostModal
+          prefill={{
+            saleName:     publishSale.buyer_seller ?? "",
+            saleAmount:   Number(publishSale.amount ?? 0),
+            saleCost:     Number(publishSale.cost   ?? 0),
+            salePlatform: publishSale.platform ?? "vinted",
+            photoUrl:     publishSale.template_id_ext ? (photoMap[publishSale.template_id_ext] ?? "") : "",
+          }}
+          onClose={() => setPublishSale(null)}
+          onSuccess={() => setPublishSale(null)}
+        />
+      )}
+
       {modal && <SaleModal mode={modal.mode} sale={modal.sale} templates={templates} profiles={profiles} onClose={() => setModal(null)} />}
 
       {/* Confirm Delete */}
@@ -196,6 +214,7 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
                     {s.status === "closed" ? "→ Riapri" : "✓ Concludi"}
                   </button>
                   <button onClick={() => { setExpanded(null); setModal({ mode: "edit", sale: s }); }} className="btn btn-outline" style={{ flex: 1 }}>Modifica</button>
+                  <button onClick={() => { setExpanded(null); setPublishSale(s); }} style={{ padding: "10px 14px", borderRadius: 999, border: "1px solid rgba(107,184,0,.3)", background: "rgba(107,184,0,.06)", color: "#6bb800", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>📸 Feed</button>
                   {s.raw_data?.stock_id && s.status === "open" && (
                     <button onClick={() => handleConclude(s.id, s.raw_data!.stock_id!)} style={{ background: "#007782", color: "#ffffff", flex: 1, padding: "10px 18px", borderRadius: 999, border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Concludi</button>
                   )}

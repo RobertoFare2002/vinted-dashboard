@@ -33,28 +33,28 @@ type Props = {
 const S = {
   overlay: {
     position: "fixed" as const, inset: 0, zIndex: 100,
-    background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)",
+    background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
     display: "flex", alignItems: "center", justifyContent: "center",
     padding: "16px",
   },
   modal: {
-    background: "#ffffff", border: "none",
+    background: "var(--white)", border: "1px solid var(--border)",
     borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 520,
     maxHeight: "90vh", overflowY: "auto" as const,
-    boxShadow: "0 24px 60px rgba(0,0,0,.14)",
+    boxShadow: "0 24px 80px rgba(0,0,0,.25)",
   },
-  title: { fontSize: 17, fontWeight: 700, marginBottom: 20, color: "#111111" },
+  title: { fontSize: 17, fontWeight: 700, marginBottom: 20, color: "var(--ink)" },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", marginBottom: 12 },
   field: { marginBottom: 12 },
   label: {
-    display: "block", fontSize: 11, color: "#888888",
+    display: "block", fontSize: 11, color: "var(--slate)",
     marginBottom: 5, fontWeight: 600,
     textTransform: "uppercase" as const, letterSpacing: ".05em",
   },
   input: {
     width: "100%", padding: "10px 13px", borderRadius: 12,
-    border: "1px solid #EBEBEB", background: "#F5F5F5",
-    color: "#111111", fontSize: 13, fontFamily: "inherit",
+    border: "1px solid var(--border)", background: "var(--light)",
+    color: "var(--ink)", fontSize: 13, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box" as const,
   },
   row: { display: "flex", gap: 10, marginTop: 24 },
@@ -65,8 +65,8 @@ const S = {
   },
   btnGhost: {
     flex: 1, padding: "11px", borderRadius: 999,
-    border: "1px solid #EBEBEB", background: "#ffffff",
-    color: "#888888", fontWeight: 600,
+    border: "1px solid var(--border)", background: "var(--white)",
+    color: "var(--slate)", fontWeight: 600,
     fontSize: 13, cursor: "pointer", fontFamily: "inherit",
   },
   err: {
@@ -91,7 +91,6 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
   const platformRef = useRef<HTMLSelectElement>(null);
   const statusRef   = useRef<HTMLSelectElement>(null);
   const dateRef     = useRef<HTMLInputElement>(null);
-  const tplRef      = useRef<HTMLSelectElement>(null);
   const notesRef    = useRef<HTMLTextAreaElement>(null);
 
   const resolvedProfileId = useMemo(() => {
@@ -101,7 +100,8 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
     return byName?.id ?? "";
   }, [sale?.profile_id, profiles]);
 
-  const [selectedProfile, setSelectedProfile] = useState(resolvedProfileId);
+  const [selectedProfile,  setSelectedProfile]  = useState(resolvedProfileId);
+  const [selectedTemplate, setSelectedTemplate] = useState(sale?.template_id_ext ?? "");
 
   function getValues() {
     return {
@@ -111,7 +111,7 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
       platform:         platformRef.current?.value ?? "vinted",
       status:           statusRef.current?.value   ?? "open",
       transaction_date: dateRef.current?.value     ?? today,
-      template_id_ext:  tplRef.current?.value      || null,
+      template_id_ext:  selectedTemplate            || null,
       profile_id:       selectedProfile             || null,
       notes:            notesRef.current?.value     ?? "",
     };
@@ -191,7 +191,7 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
         <div style={S.grid2}>
           <div>
             <label style={S.label}>Template collegato</label>
-            <select ref={tplRef} style={S.input} defaultValue={sale?.template_id_ext ?? ""}>
+            <select value={selectedTemplate} onChange={e => setSelectedTemplate(e.target.value)} style={S.input}>
               <option value="">— nessuno —</option>
               {templates.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
@@ -217,13 +217,13 @@ export default function SaleModal({ mode, sale, templates = [], profiles = [], b
                 <div key={item.stock_id || i} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   padding: "9px 12px", borderRadius: 10,
-                  background: "#F5F5F5", border: "1px solid #EBEBEB",
+                  background: "var(--light)", border: "1px solid var(--border)",
                   gap: 8,
                 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#111111" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink)" }}>
                     {item.name || "—"}
                   </span>
-                  <span style={{ fontSize: 12, color: "#888888", flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: "var(--slate)", flexShrink: 0 }}>
                     costo €{fmtM(item.cost)}
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#6bb800", flexShrink: 0 }}>

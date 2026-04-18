@@ -72,6 +72,20 @@ const TABS = [
       </svg>
     ),
   },
+  {
+    href: "/feed",
+    label: "Feed",
+    icon: (active: boolean) => (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="3" y="3" width="14" height="10" rx="2"
+          stroke={active ? "#007782" : "#aaa"} strokeWidth="1.5"
+          fill={active ? "rgba(0,119,130,.1)" : "none"}/>
+        <circle cx="7" cy="14.5" r="1.5" fill={active ? "#007782" : "#aaa"}/>
+        <circle cx="10" cy="14.5" r="1.5" fill={active ? "#007782" : "#aaa"}/>
+        <circle cx="13" cy="14.5" r="1.5" fill={active ? "#007782" : "#aaa"}/>
+      </svg>
+    ),
+  },
 ];
 
 export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl }: TabBarProps) {

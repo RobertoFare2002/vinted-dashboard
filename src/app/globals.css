@@ -181,13 +181,14 @@ html, body {
   padding: 24px 24px 24px;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--light);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
-/* fx-page-wrap: greeting + grid, fills remaining height */
+/* fx-page-wrap: greeting + grid, fills shell-main (Overview = fixed-height box) */
 .fx-page-wrap {
   display: flex;
   flex-direction: column;
@@ -412,35 +413,39 @@ html.dark {
   --primary-dark:#007782;
 
   /* Variabili base — usate da body, card, button, tbl */
-  --ink:         #f0f0f0;
-  --slate:       rgba(255,255,255,.45);
-  --light:       #111113;
-  --border:      rgba(255,255,255,.09);
-  --white:       #1e1e20;
+  --ink:         #ececee;
+  --slate:       rgba(255,255,255,.38);
+  --light:       #0e0e10;
+  --border:      rgba(255,255,255,.08);
+  --white:       #1a1a1d;
   --green:       #7fd400;
   --green-light: #9de800;
   --green-bg:    rgba(107,184,0,.15);
   --green-bg2:   rgba(107,184,0,.10);
-  --dot-inactive: rgba(255,255,255,0.35);
+  --dot-inactive: rgba(255,255,255,0.30);
+  --red:         #FF4D4D;
+  --amber:       #F5A623;
 }
 
 /* ── Body e sfondo pagina ── */
-html.dark body { background: #111113; color: #f0f0f0; }
-html.dark .fx-page-wrap { background: #111113 !important; }
-html.dark .fx-grid-wrap { background: #111113 !important; }
+html.dark body { background: #0e0e10; color: #ececee; }
+html.dark .shell-main { background: #0e0e10 !important; }
+html.dark .fx-page-wrap { background: #0e0e10 !important; }
+html.dark .fx-grid-wrap { background: #0e0e10 !important; }
 
 /* ── Scrollbar ── */
 html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); }
 
 /* ── Card sistema ── */
 html.dark .card {
-  background: #1e1e20;
-  box-shadow: 0 4px 20px rgba(0,0,0,.4);
-  color: #f0f0f0;
+  background: #1a1a1d;
+  box-shadow: 0 2px 16px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.04) inset;
+  color: #ececee;
+  border: 1px solid rgba(255,255,255,.06);
 }
 html.dark .card-green  { background: #0a0a0c; }
-html.dark .card-label  { color: rgba(255,255,255,.4); }
-html.dark .card-value  { color: #f0f0f0; }
+html.dark .card-label  { color: rgba(255,255,255,.38); }
+html.dark .card-value  { color: #ececee; }
 html.dark .card-delta  { background: rgba(0,160,175,.15); color: #00a0af; }
 
 /* ── Bottoni ── */
@@ -580,18 +585,42 @@ html.dark .tn-mark  { background: #27272a !important; }
 html.dark .tn-hamburger { color: rgba(255,255,255,.45) !important; }
 html.dark .tn-settings-body { background: #1e1e20; }
 
-/* ── Form inputs (impostazioni) ── */
+/* ── Form inputs ── */
 html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 html.dark textarea,
 html.dark select {
-  background: #27272a !important;
-  color: #f0f0f0 !important;
-  border-color: rgba(255,255,255,.12) !important;
+  background: #232326 !important;
+  color: #ececee !important;
+  border-color: rgba(255,255,255,.1) !important;
 }
 html.dark input::placeholder,
-html.dark textarea::placeholder { color: rgba(255,255,255,.25) !important; }
-html.dark label { color: #f0f0f0 !important; }
+html.dark textarea::placeholder { color: rgba(255,255,255,.22) !important; }
+html.dark label { color: #ececee !important; }
 
 /* ── Profili card sidebar ── */
-html.dark .fx-profile-name { color: #f0f0f0 !important; }
-html.dark .fx-profile-sub  { color: rgba(255,255,255,.4) !important; }
+html.dark .fx-profile-name { color: #ececee !important; }
+html.dark .fx-profile-sub  { color: rgba(255,255,255,.38) !important; }
+
+/* ── Scrollbar dark ── */
+html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.10); }
+html.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.18); }
+
+/* ── Righe lista (lp-row) — DashboardCharts ── */
+html.dark .lp-row { color: #ececee; }
+html.dark .lp-row:hover { background: rgba(255,255,255,.03) !important; }
+html.dark .lp-row-active { background: rgba(255,255,255,.05) !important; }
+
+/* ── fx-card (DashboardCharts) ── */
+html.dark .fx-card {
+  background: #1a1a1d !important;
+  border: 1px solid rgba(255,255,255,.06) !important;
+  color: #ececee !important;
+}
+
+/* ── Btn-outline dark ── */
+html.dark .btn-outline {
+  background: #232326 !important;
+  color: #ececee !important;
+  border-color: rgba(255,255,255,.1) !important;
+}
+html.dark .btn-outline:hover { background: #2a2a2e !important; }

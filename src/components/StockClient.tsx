@@ -18,11 +18,11 @@ type Props = { initialItems: StockItem[]; photoMap: Record<string, string>; prof
 const G      = "#007782";
 const RED    = "#FF4D4D";
 const AMB    = "#F5A623";
-const INK    = "#111111";
-const SL     = "#888888";
-const BD     = "#EBEBEB";
-const LT     = "#F5F5F5";
-const W      = "#ffffff";
+const INK    = "var(--ink)";
+const SL     = "var(--slate)";
+const BD     = "var(--border)";
+const LT     = "var(--light)";
+const W      = "var(--white)";
 const VINTED = "#09B1BA";
 
 const STATUS_META: Record<string, { label: string; dot: string; color: string; bg: string }> = {

@@ -44,7 +44,7 @@ export default async function SalesPage() {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "#111111", letterSpacing: "-.03em" }}>Vendite</h1>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "var(--ink)", letterSpacing: "-.03em" }}>Vendite</h1>
       </div>
 
       <SalesClient
