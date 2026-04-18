@@ -235,51 +235,51 @@ html, body {
     display: flex !important;
     flex-direction: column !important;
   }
-  /* page wrap: fills shell, no overflow */
+  /* page wrap: scroll container per l'overview su mobile (shell-main ha overflow:hidden) */
   .fx-page-wrap {
     flex: 1;
-    min-height: 0;
     height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     gap: 0;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
   /* desktop greeting hidden on mobile */
   .desktop-greeting { display: none !important; }
-  /* grid wrap: NON scrolla — layout fisso in altezza, scroll solo nella lista interna */
+  /* grid wrap: altezza naturale — il contenuto cresce verso il basso */
   .fx-grid-wrap {
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     user-select: none;
-    padding: 12px 12px 0;
+    padding: 0 12px 90px;
     display: flex;
     flex-direction: column;
   }
   /* spacing between kpi cards and content below */
-  .mh-kpi-wrap { margin-bottom: 6px; }
-  /* mobile grid: colonna singola, si espande per riempire lo spazio */
+  .mh-kpi-wrap { margin-bottom: 8px; }
+  /* mobile grid: colonna singola, altezza naturale */
   .fx-grid {
-    flex: 1;
-    min-height: 0;
-    height: 100% !important;
-    overflow: hidden !important;
-    gap: 4px;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    gap: 8px;
     display: flex !important;
     flex-direction: column !important;
   }
   .fx-right {
-    flex: 1;
-    min-height: 0;
-    height: 100% !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
     overflow: visible !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 4px;
-    padding-bottom: 80px;
+    gap: 8px;
+    padding-bottom: 0;
     width: 100%;
     box-sizing: border-box;
   }
@@ -310,16 +310,22 @@ html, body {
   .fx-table td { padding: 11px 8px !important; }
   .fx-table th { padding: 8px 8px !important; }
 
+  /* ── Fix: tutti i flex:1 figli di fx-right diventano naturali su mobile ── */
+  .fx-right > *,
+  .fx-right > * > * {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
   /* ── Fix: fx-card su mobile non deve espandersi né clippare ── */
   .fx-right .fx-card {
     overflow: visible !important;
     padding: 16px !important;
     flex: 0 0 auto !important;
+    height: auto !important;
   }
   /* ── Fix: flex-shrink:0 on all non-growing elements in fx-right ── */
   .mobile-flex-header { flex-shrink: 0 !important; }
-  /* ── Fix: the fx-grid needs overflow visible so fx-right can scroll inside ── */
-  .fx-grid { overflow: visible !important; }
   /* ── Fix: mobile list wrap deve rispettare la larghezza del contenitore ── */
   .fx-mobile-list-wrap,
   .fx-mobile-list {
@@ -363,6 +369,12 @@ html, body {
 .mobile-hide { display: block; }
 @media (max-width: 860px) { .mobile-hide { display: none !important; } }
 
+/* fx-bottom-cards: 3-col desktop, 1-col mobile */
+.fx-bottom-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 860px) {
+  .fx-bottom-cards { grid-template-columns: 1fr !important; }
+}
+
 /* mobile-view-toggle: hidden on desktop, visible on mobile */
 .mobile-view-toggle { display: none; }
 @media (max-width: 860px) { .mobile-view-toggle { display: block; } }
@@ -380,33 +392,21 @@ html, body {
     gap: 0;
     flex-shrink: 0;
     min-height: 0;
-    max-height: 234px;
-    overflow-y: auto;
+    /* no max-height: the page scrolls via shell-main */
+    overflow-y: visible;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     user-select: none;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0,0,0,.12) transparent;
   }
-  .fx-mobile-list::-webkit-scrollbar { display: block !important; width: 3px; }
-  .fx-mobile-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 4px; }
   .fx-mobile-list-wrap {
     position: relative;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
   }
-  .fx-mobile-list-wrap::after {
-    content: "";
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 36px;
-    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.92));
-    pointer-events: none;
-    border-radius: 0 0 16px 16px;
-  }
+  /* no fade-out gradient since page scrolls (no clipping) */
+  .fx-mobile-list-wrap::after { display: none; }
   /* tab bar sizing */
   .mtb-root {
     padding: 10px 0 max(16px, env(safe-area-inset-bottom)) !important;
@@ -563,9 +563,7 @@ html.dark .lp-backdrop    { background: rgba(0,0,0,.6) !important; }
 html.dark .fx-mobile-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15) !important; }
 html.dark .fx-recent-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15) !important; }
 
-html.dark .fx-mobile-list-wrap::after {
-  background: linear-gradient(to bottom, transparent, rgba(17,17,19,0.96)) !important;
-}
+html.dark .fx-mobile-list-wrap::after { display: none !important; }
 
 /* ── KPI card mobile (sopra header verde, rimane bianca) ── */
 html.dark .mh-kpi-card { background: #1e1e20 !important; }

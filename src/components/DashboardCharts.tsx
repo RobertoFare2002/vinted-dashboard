@@ -1493,9 +1493,9 @@ export default function DashboardCharts({
             </div>
           )}
 
-          {/* 3 card sotto attività recenti — desktop only */}
+          {/* Card sotto attività recenti — desktop 3-col, mobile 1-col */}
           {activeView === "vendite" && (
-            <div className="mobile-hide" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+            <div className="fx-bottom-cards" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
               <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} />
               <div style={{ background: "var(--white)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1514,7 +1514,7 @@ export default function DashboardCharts({
             </div>
           )}
           {activeView === "magazzino" && (
-            <div className="mobile-hide" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+            <div className="fx-bottom-cards" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
               <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} defaultView="acquisto" />
               <div style={{ background: "var(--white)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>

@@ -72,61 +72,62 @@ export default function MobileHeader({
   return (
     <>
       <style>{`
-        .mh-root { background: #007782; padding: 18px 20px 110px; flex-shrink: 0; min-height: 220px; }
+        .mh-root {
+          background: linear-gradient(160deg, #007f8c 0%, #005a64 100%);
+          padding: 12px 20px 64px; flex-shrink: 0;
+        }
 
         .mh-topbar {
-          display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;
+          display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
         }
-        .mh-logo-row { display: flex; align-items: center; gap: 9px; }
+        .mh-logo-row { display: flex; align-items: center; gap: 8px; }
         .mh-logo-box {
-          width: 32px; height: 32px; border-radius: 9px;
+          width: 28px; height: 28px; border-radius: 8px;
           background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.3);
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .mh-logo-name { color: #fff; font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+        .mh-logo-name { color: #fff; font-size: 14px; font-weight: 800; letter-spacing: -.02em; }
 
-        .mh-greeting { color: rgba(255,255,255,.5); font-size: 12px; font-weight: 500; margin-bottom: 1px; }
+        .mh-greeting { color: rgba(255,255,255,.55); font-size: 11px; font-weight: 500; margin-bottom: 1px; }
         .mh-profit-label {
-          color: rgba(255,255,255,.4); font-size: 9px; font-weight: 600;
-          letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px;
-          min-height: 14px;
+          color: rgba(255,255,255,.45); font-size: 9px; font-weight: 600;
+          letter-spacing: .12em; text-transform: uppercase; margin-bottom: 3px;
         }
         .mh-profit-val {
-          font-size: 48px; font-weight: 900; color: #a8e63d;
+          font-size: 32px; font-weight: 900; color: #a8e63d;
           letter-spacing: -.05em; line-height: 1;
-          min-height: 48px;
         }
-        .mh-profit-sub { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 28px; }
+        .mh-profit-sub { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
         .mh-delta {
-          background: rgba(168,230,61,.15); border: 1px solid rgba(168,230,61,.35);
-          color: #a8e63d; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 999px;
+          background: rgba(168,230,61,.18); border: 1px solid rgba(168,230,61,.4);
+          color: #a8e63d; font-size: 11px; font-weight: 700; padding: 3px 12px; border-radius: 999px;
         }
         .mh-delta-sub { color: rgba(255,255,255,.4); font-size: 11px; }
 
         /* KPI cards */
-        .mh-kpi-wrap { padding: 0 16px; margin-top: -68px; position: relative; z-index: 1; }
+        .mh-kpi-wrap { padding: 0 14px; margin-top: -44px; position: relative; z-index: 1; }
         .mh-kpi-scroll {
-          display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none;
+          display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none;
           padding-bottom: 4px; -webkit-overflow-scrolling: touch;
           scroll-behavior: smooth;
           scroll-snap-type: x mandatory;
         }
         .mh-kpi-scroll::-webkit-scrollbar { display: none; }
         .mh-kpi-card {
-          background: var(--white, #fff); border-radius: 18px; transition: background .35s;
-          padding: 22px 20px; flex-shrink: 0; width: calc(50vw - 28px);
-          box-shadow: 0 2px 16px rgba(0,0,0,.09);
+          background: var(--white, #fff); border-radius: 16px; transition: background .35s;
+          padding: 14px 15px; flex-shrink: 0; width: calc(50vw - 24px);
+          box-shadow: 0 4px 20px rgba(0,0,0,.12);
           scroll-snap-align: start;
         }
         .mh-kpi-label {
-          font-size: 10px; font-weight: 600; color: var(--slate, #888); transition: color .25s;
-          text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px;
+          font-size: 9px; font-weight: 600; color: var(--slate, #888); transition: color .25s;
+          text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px;
         }
         .mh-kpi-val {
-          font-size: 26px; font-weight: 800; color: var(--ink, #111); transition: color .25s;
+          font-size: 20px; font-weight: 800; color: var(--ink, #111); transition: color .25s;
           letter-spacing: -.03em; line-height: 1;
         }
-        .mh-kpi-sub { font-size: 10px; font-weight: 600; margin-top: 5px; }
+        .mh-kpi-sub { font-size: 10px; font-weight: 600; margin-top: 3px; }
         .kpi-green { color: #6bb800; }
         .kpi-teal  { color: #007782; }
         .kpi-amber { color: #F5A623; }
@@ -172,7 +173,7 @@ export default function MobileHeader({
 
         {/* Greeting + profit */}
         <div className="mh-greeting">{greeting},</div>
-        <div style={{ color: "#fff", fontSize: 20, fontWeight: 800, letterSpacing: "-.02em", marginBottom: 12 }}>{firstName}</div>
+        <div style={{ color: "#fff", fontSize: 17, fontWeight: 800, letterSpacing: "-.02em", marginBottom: 8 }}>{firstName}</div>
         <div className="mh-profit-label">Profitto totale all time</div>
         <div className="mh-profit-val">€{fmt(allTimeProfit)}</div>
         <div className="mh-profit-sub">
@@ -186,7 +187,7 @@ export default function MobileHeader({
         <div className="mh-kpi-scroll" ref={scrollRef}>
           {/* Set originale */}
           <div className="mh-kpi-card">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5L8 1.5z" stroke="#007782" strokeWidth="1.4" strokeLinejoin="round"/>
                 <path d="M8 1.5v13M1.5 5l6.5 3.5L14.5 5" stroke="#007782" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -197,7 +198,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-teal">disponibili</div>
           </div>
           <div className="mh-kpi-card">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M1.5 1.5h2l2.4 7.3h6.6l1.6-4.6H5.3" stroke="#007782" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                 <circle cx="7" cy="13" r="1.1" fill="#007782"/>
@@ -209,7 +210,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-teal">{selectedProfileId ? "profilo" : "all time"}</div>
           </div>
           <div className="mh-kpi-card">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M3 4h10M3 8h10M3 12h6" stroke="#6bb800" strokeWidth="1.4" strokeLinecap="round"/>
               </svg>
@@ -219,7 +220,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-green">{selectedProfileId ? "profilo" : "all time"}</div>
           </div>
           <div className="mh-kpi-card">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <circle cx="8" cy="8" r="6.5" stroke="#F5A623" strokeWidth="1.4"/>
                 <path d="M8 5v3.5l2 2" stroke="#F5A623" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -230,7 +231,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-amber">da incassare</div>
           </div>
           <div className="mh-kpi-card">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M8 2v12M4 6l4-4 4 4M4 10h8" stroke="#FF4D4D" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -241,7 +242,7 @@ export default function MobileHeader({
           </div>
           {/* Clone per scroll infinito */}
           <div className="mh-kpi-card" aria-hidden="true">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5L8 1.5z" stroke="#007782" strokeWidth="1.4" strokeLinejoin="round"/>
                 <path d="M8 1.5v13M1.5 5l6.5 3.5L14.5 5" stroke="#007782" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -252,7 +253,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-teal">disponibili</div>
           </div>
           <div className="mh-kpi-card" aria-hidden="true">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M1.5 1.5h2l2.4 7.3h6.6l1.6-4.6H5.3" stroke="#007782" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                 <circle cx="7" cy="13" r="1.1" fill="#007782"/>
@@ -264,7 +265,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-teal">{selectedProfileId ? "profilo" : "all time"}</div>
           </div>
           <div className="mh-kpi-card" aria-hidden="true">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M3 4h10M3 8h10M3 12h6" stroke="#6bb800" strokeWidth="1.4" strokeLinecap="round"/>
               </svg>
@@ -274,7 +275,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-green">{selectedProfileId ? "profilo" : "all time"}</div>
           </div>
           <div className="mh-kpi-card" aria-hidden="true">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <circle cx="8" cy="8" r="6.5" stroke="#F5A623" strokeWidth="1.4"/>
                 <path d="M8 5v3.5l2 2" stroke="#F5A623" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -285,7 +286,7 @@ export default function MobileHeader({
             <div className="mh-kpi-sub kpi-amber">da incassare</div>
           </div>
           <div className="mh-kpi-card" aria-hidden="true">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M8 2v12M4 6l4-4 4 4M4 10h8" stroke="#FF4D4D" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
