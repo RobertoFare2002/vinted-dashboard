@@ -15,10 +15,10 @@ export default async function TemplatesPage() {
   const templates = (data ?? []) as Template[];
 
   return (
-    <div>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6, color: "#111111", letterSpacing: "-.03em" }}>Template Vinted</h1>
-        <p style={{ color: "#888888", fontSize: 14, margin: 0 }}>
+    <div className="page-scroll">
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4, color: "var(--ink)", letterSpacing: "-.03em" }}>Template Vinted</h1>
+        <p style={{ color: "var(--slate)", fontSize: 13, margin: 0 }}>
           {templates.length} template · modifica dal sito o dall&apos;estensione
         </p>
       </div>

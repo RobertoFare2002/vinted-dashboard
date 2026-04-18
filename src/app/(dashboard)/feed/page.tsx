@@ -38,12 +38,7 @@ export default async function FeedPage() {
   }));
 
   return (
-    <div style={{
-      flex: 1,
-      minHeight: 0,
-      overflowY: "auto",
-      overflowX: "hidden",
-    }}>
+    <div className="page-scroll">
       <FeedClient initialPosts={posts} currentUserId={user.id} />
     </div>
   );

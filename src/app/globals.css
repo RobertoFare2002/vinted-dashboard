@@ -435,6 +435,20 @@ html, body {
   .mobile-header-wrap { display: block; flex-shrink: 0; }
 }
 
+/* ── TEMPLATES GRID ── */
+.tpl-card { transition: box-shadow .2s, transform .2s; }
+.tpl-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.10) !important; }
+.tpl-cover-img { transition: transform .3s cubic-bezier(.22,.68,0,1.2); }
+.tpl-card:hover .tpl-cover-img { transform: scale(1.05); }
+.tpl-zoom-overlay { opacity: 0; transition: opacity .2s; }
+.tpl-card:hover .tpl-zoom-overlay { opacity: 1; }
+.tpl-thumb { transition: border-color .15s, opacity .15s; opacity: .75; }
+.tpl-thumb:hover { border-color: #007782 !important; opacity: 1; }
+@media (max-width: 860px) {
+  .tpl-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+  .tpl-card:hover { transform: none; }
+}
+
 /* ── TABLE RESPONSIVE COLUMNS ── */
 .fx-col-hide-md {}
 .fx-col-hide-sm {}
