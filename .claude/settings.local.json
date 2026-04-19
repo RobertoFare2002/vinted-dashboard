@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(sed -i 's|import ChangelogModal from \"@/components/ChangelogModal\";|import ChangelogModal from \"@/components/ChangelogModal\";\\\\nimport { useFeedNotification } from \"@/hooks/useFeedNotification\";|' \"C:/dev/vinted-dashboard/src/components/TopNav.tsx\")",
+      "Bash(sed -i 's|  const \\\\[dropOpen,     setDropOpen\\\\]     = useState\\(false\\);|  const { hasUnread, markAsRead } = useFeedNotification\\(\\);\\\\n\\\\n  // Segna come letto quando pathname cambia a \\\\/feed\\\\n  useEffect\\(\\(\\) => {\\\\n    if \\(pathname === \"\\\\/feed\" || pathname.startsWith\\(\"\\\\/feed\\\\/\"\\)\\) markAsRead\\(\\);\\\\n    \\\\/\\\\/ eslint-disable-next-line react-hooks\\\\/exhaustive-deps\\\\n  }, [pathname]\\);\\\\n\\\\n  const [dropOpen,     setDropOpen]     = useState\\(false\\);|' \"C:/dev/vinted-dashboard/src/components/TopNav.tsx\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

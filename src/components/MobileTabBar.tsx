@@ -7,6 +7,7 @@ import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import ChangelogModal from "@/components/ChangelogModal";
 import SettingsModal from "@/components/SettingsModal";
+import { useFeedNotification } from "@/hooks/useFeedNotification";
 
 type TabBarProps = {
   firstName?: string;
@@ -97,6 +98,13 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
   const [settingsOpen,  setSettingsOpen]  = useState(false);
   const [isDark, setIsDark] = useState<boolean>(false);
   const menuRef   = useRef<HTMLDivElement>(null);
+  const { hasUnread, markAsRead } = useFeedNotification();
+
+  // Segna come letto quando l'utente è sul Feed
+  useEffect(() => {
+    if (pathname === "/feed" || pathname.startsWith("/feed/")) markAsRead();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Al mount: legge localStorage e imposta lo stato
   useEffect(() => {
@@ -205,14 +213,31 @@ export default function MobileTabBar({ firstName = "", userEmail = "", avatarUrl
         .mtb-pill:not(.on) .mtb-ico-moon { opacity: 0; }
         .mtb-pill.on .mtb-ico-sun { opacity: 0; }
         .mtb-pill.on .mtb-ico-moon { opacity: 1; }
+        @keyframes feedDotPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: .8; }
+        }
       `}</style>
 
       <nav className="mtb-root">
         {TABS.map(tab => {
           const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+          const isFeed = tab.href === "/feed";
+          const showDot = isFeed && hasUnread;
           return (
             <Link key={tab.href} href={tab.href} className="mtb-item">
-              {tab.icon(active)}
+              <div style={{ position: "relative", display: "inline-flex" }}>
+                {tab.icon(active)}
+                {showDot && (
+                  <span style={{
+                    position: "absolute", top: -2, right: -2,
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: "#FF4D4D",
+                    border: "1.5px solid var(--mtb-bg, #fff)",
+                    animation: "feedDotPulse 1.8s ease-in-out infinite",
+                  }} />
+                )}
+              </div>
               <span className={`mtb-label ${active ? "mtb-label-active" : "mtb-label-inactive"}`}>{tab.label}</span>
             </Link>
           );
