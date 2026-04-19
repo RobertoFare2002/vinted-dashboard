@@ -13,10 +13,13 @@ type StockItem = {
   size:           string | null;
 };
 
+type Profile = { id: string; name: string };
+
 type Props = {
-  item:    StockItem;
-  thumb:   string | null;
-  onClose: () => void;
+  item:     StockItem;
+  thumb:    string | null;
+  onClose:  () => void;
+  profiles?: Profile[];
 };
 
 const S = {
@@ -43,9 +46,10 @@ const S = {
   },
 };
 
-export default function SellModal({ item, thumb, onClose }: Props) {
+export default function SellModal({ item, thumb, onClose, profiles = [] }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState(item.profile_id ?? "");
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -71,7 +75,7 @@ export default function SellModal({ item, thumb, onClose }: Props) {
           stockName:     name,
           purchasePrice: cost,
           externalId:    item.template_id_ext ?? "",
-          profileId:     item.profile_id  ?? null,
+          profileId:     selectedProfile || null,
           salePrice:     price,
           buyerSeller:   buyerRef.current?.value    ?? "",
           saleDate:      dateRef.current?.value     ?? today,
@@ -139,14 +143,31 @@ export default function SellModal({ item, thumb, onClose }: Props) {
           </div>
         </div>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={S.label}>Piattaforma</label>
-          <select ref={platformRef} style={S.input} defaultValue="vinted">
-            <option value="vinted">Vinted</option>
-            <option value="depop">Depop</option>
-            <option value="ebay">eBay</option>
-            <option value="altro">Altro</option>
-          </select>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", marginBottom: 16 }}>
+          <div>
+            <label style={S.label}>Piattaforma</label>
+            <select ref={platformRef} style={S.input} defaultValue="vinted">
+              <option value="vinted">Vinted</option>
+              <option value="depop">Depop</option>
+              <option value="ebay">eBay</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+          {profiles.length > 0 && (
+            <div>
+              <label style={S.label}>Profilo</label>
+              <select
+                style={S.input}
+                value={selectedProfile}
+                onChange={e => setSelectedProfile(e.target.value)}
+              >
+                <option value="">— Nessuno —</option>
+                {profiles.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 20 }}>

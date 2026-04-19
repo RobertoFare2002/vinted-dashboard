@@ -3,11 +3,12 @@ type Kpi = {
   allRevenue: number;
   allPending: number;
   allCost: number;
+  stockCost: number;
 };
 
 export default function CashFlowCard({ kpi }: { kpi: Kpi }) {
   const entrate = kpi.allRevenue + kpi.allPending;
-  const uscite = kpi.allCost;
+  const uscite = kpi.allCost + kpi.stockCost;
   const saldo = entrate - uscite;
   const recoveryRate =
     uscite > 0 ? ((entrate / uscite) * 100).toFixed(1) : "—";

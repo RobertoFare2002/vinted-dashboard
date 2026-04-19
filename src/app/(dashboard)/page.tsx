@@ -94,8 +94,8 @@ export default async function DashboardPage({
   const totalRevenue = closed.reduce((s: number, x: any) => s + Number(x.amount ?? 0), 0);
   const totalCost    = sales.reduce((s: number, x: any) => s + Number(x.cost ?? 0), 0);
   const totalPending = open.reduce((s: number, x: any) => s + Number(x.amount ?? 0), 0);
-  // stockCost = solo articoli ancora in magazzino (available/reserved), non i venduti già contati in sales_log.cost
-  const stockCost    = stock.filter((i: any) => i.status === "available" || i.status === "reserved").reduce((s: number, x: any) => s + Number(x.purchase_price ?? 0), 0);
+  // stockCost = solo articoli "available": i "reserved" sono già contati in allCost via sales_log.cost
+  const stockCost    = stock.filter((i: any) => i.status === "available").reduce((s: number, x: any) => s + Number(x.purchase_price ?? 0), 0);
 
   // Cash flow all time — sempre su tutti i dati, non filtrati per profilo
   const allClosed  = allSales.filter((s: any) => s.status === "closed");

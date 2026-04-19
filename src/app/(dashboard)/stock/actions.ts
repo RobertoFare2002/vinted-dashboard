@@ -78,6 +78,7 @@ export async function sellStockItem(input: {
     throw new Error("Errore creazione vendita: " + saleError.message);
   }
 
+  revalidatePath("/");
   revalidatePath("/stock");
   revalidatePath("/sales");
 
@@ -116,6 +117,7 @@ export async function concludeSale(input: {
 
   if (stockError) throw new Error("Errore aggiornamento magazzino: " + stockError.message);
 
+  revalidatePath("/");
   revalidatePath("/stock");
   revalidatePath("/sales");
 }
@@ -149,6 +151,7 @@ export async function cancelSale(input: {
 
   if (stockError) throw new Error("Errore ripristino magazzino: " + stockError.message);
 
+  revalidatePath("/");
   revalidatePath("/stock");
   revalidatePath("/sales");
 }
@@ -274,6 +277,7 @@ export async function bulkSellStockItems(input: {
 
   if (saleError) throw new Error("Errore creazione vendita: " + saleError.message);
 
+  revalidatePath("/");
   revalidatePath("/stock");
   revalidatePath("/sales");
 }
@@ -331,6 +335,7 @@ export async function concludeBulkSale(input: { saleIds: string[] }) {
     if (error) throw new Error("Errore aggiornamento magazzino: " + error.message);
   }
 
+  revalidatePath("/");
   revalidatePath("/stock");
   revalidatePath("/sales");
 }
@@ -371,6 +376,7 @@ export async function cancelBulkSale(input: { saleIds: string[] }) {
     if (error) throw new Error("Errore ripristino magazzino: " + error.message);
   }
 
+  revalidatePath("/");
   revalidatePath("/stock");
   revalidatePath("/sales");
 }

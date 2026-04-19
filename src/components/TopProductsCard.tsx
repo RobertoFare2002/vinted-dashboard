@@ -262,6 +262,7 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
                         <span style={{ fontSize: 12 }}>{MEDALS[1]}</span>
                         <span className="tpc-row-name">{r2.name}</span>
                       </div>
+                      <div className="tpc-row-sub">€{fmt(r2.buy)} → €{fmt(r2.sell)}</div>
                     </div>
                   </div>
                   <span className="tpc-row-value" style={{ color: r2.color }}>{r2.display}</span>
@@ -278,6 +279,7 @@ export default function TopProductsCard({ sales, photoMap, stockItems, selectedP
                       <span style={{ fontSize: 12 }}>{MEDALS[2]}</span>
                       <span className="tpc-row-name">{r3.name}</span>
                     </div>
+                    <div className="tpc-row-sub">€{fmt(r3.buy)} → €{fmt(r3.sell)}</div>
                   </div>
                 </div>
                 <span className="tpc-row-value" style={{ color: r3.color }}>{r3.display}</span>
