@@ -1,8 +1,8 @@
 "use client";
 // src/components/ValutaOffertaCard.tsx
 
-import { useState, useMemo } from "react";
-import { X } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { X, Search } from "lucide-react";
 
 type StockItem = {
   id?: string;
@@ -36,28 +36,37 @@ function daysInStock(purchasedAt: string | null | undefined) {
 }
 
 function marginLabel(pct: number) {
-  if (pct < 0)  return "Sotto costo";
-  if (pct < 15) return "Minimo";
-  if (pct < 30) return "Accettabile";
+  if (pct < 0)   return "Sotto costo";
+  if (pct < 50)  return "Accettabile";
+  if (pct < 100) return "Buono";
   return "Ottimo";
 }
 
-function marginColor(profit: number) {
-  if (profit < 0) return "#FF4D4D";
-  if (profit < 3) return "#f5a623";
+function marginColor(pct: number) {
+  if (pct < 0)   return "#FF4D4D";
+  if (pct < 50)  return "#f5a623";
   return "#6bb800";
 }
 
 export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) {
+  const [query,     setQuery]     = useState("");
+  const [showDrop,  setShowDrop]  = useState(false);
   const [selId,     setSelId]     = useState("");
   const [isOpen,    setIsOpen]    = useState(false);
   const [offerVal,  setOfferVal]  = useState("");
   const [sliderVal, setSliderVal] = useState(1);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   const available = useMemo(
     () => stockItems.filter(i => i.status === "available" || i.status === "in_stock"),
     [stockItems]
   );
+
+  const results = useMemo(() => {
+    if (!query.trim()) return available.slice(0, 6);
+    const q = query.toLowerCase();
+    return available.filter(i => (i.name ?? "").toLowerCase().includes(q)).slice(0, 8);
+  }, [available, query]);
 
   const item    = available.find(i => i.id === selId) ?? null;
   const cost    = Number(item?.purchase_price ?? 0);
@@ -71,8 +80,23 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
   const profit    = offerNum - cost;
   const marginPct = cost > 0 ? Math.round((profit / cost) * 100) : 0;
   const barPct    = Math.min(Math.max(marginPct, 0) / 70, 1);
-  const mColor    = marginColor(profit);
+  const mColor    = marginColor(marginPct);
   const mLabel    = marginLabel(marginPct);
+
+  // Chiudi dropdown se click fuori
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setShowDrop(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  function selectItem(id: string, name: string) {
+    setSelId(id);
+    setQuery(name);
+    setShowDrop(false);
+  }
 
   function openModal() {
     if (!item) return;
@@ -98,69 +122,104 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
       {/* ── CARD ── */}
       <div style={{
         background: "var(--white)",
-        borderRadius: "0 20px 20px 0",
-        borderLeft: `3px solid ${TEAL}`,
+        borderRadius: 20,
         border: "1px solid var(--border)",
-        borderLeftWidth: 3,
-        borderLeftColor: TEAL,
         boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-        padding: "18px 20px",
+        padding: "16px 18px",
         display: "flex",
         flexDirection: "column",
-        gap: 12,
-        minHeight: 160,
+        gap: 10,
       }}>
         {/* Title */}
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>Valuta offerta</div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: TEAL, marginTop: 2 }}>Analisi P&amp;L</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Valuta offerta</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: TEAL, marginTop: 1 }}>Analisi P&amp;L</div>
         </div>
 
-        {/* Dropdown */}
-        <div style={{ position: "relative" }}>
-          <select
-            value={selId}
-            onChange={e => setSelId(e.target.value)}
-            style={{
-              width: "100%", padding: "9px 32px 9px 12px", borderRadius: 10,
-              border: "1px solid var(--border)", background: "var(--light)",
-              color: selId ? "var(--ink)" : "var(--slate)", fontSize: 12,
-              fontFamily: "inherit", outline: "none", appearance: "none",
-              cursor: "pointer",
-            }}
-          >
-            <option value="">Scegli articolo dal magazzino…</option>
-            {available.map(i => (
-              <option key={i.id} value={i.id}>
-                {i.name}{i.size ? ` · ${i.size}` : ""}{i.purchase_price ? ` · €${fmt(Number(i.purchase_price))}` : ""}
-              </option>
-            ))}
-          </select>
-          <svg style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 4l4 4 4-4" stroke="var(--slate)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+        {/* Search bar */}
+        <div ref={wrapRef} style={{ position: "relative" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "7px 10px", borderRadius: 10,
+            border: `1px solid ${showDrop ? TEAL : "var(--border)"}`,
+            background: "var(--light)", transition: "border-color .15s",
+          }}>
+            <Search size={13} color="var(--slate)" style={{ flexShrink: 0 }} />
+            <input
+              value={query}
+              onChange={e => { setQuery(e.target.value); setShowDrop(true); if (!e.target.value) setSelId(""); }}
+              onFocus={() => setShowDrop(true)}
+              placeholder="Cerca articolo dal magazzino…"
+              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12, color: "var(--ink)", fontFamily: "inherit" }}
+            />
+            {query && (
+              <button onClick={() => { setQuery(""); setSelId(""); setShowDrop(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--slate)", padding: 0, lineHeight: 1 }}>
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Results dropdown */}
+          {showDrop && results.length > 0 && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 200,
+              background: "var(--white)", borderRadius: 12,
+              border: "1px solid var(--border)", boxShadow: "0 8px 24px rgba(0,0,0,.10)",
+              overflow: "hidden", maxHeight: 220, overflowY: "auto",
+            }}>
+              {results.map(i => {
+                const p = i.template_id_ext ? (photoMap[i.template_id_ext] ?? null) : null;
+                const d = daysInStock(i.purchased_at);
+                return (
+                  <div
+                    key={i.id}
+                    onMouseDown={() => selectItem(i.id ?? "", i.name ?? "")}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "8px 12px", cursor: "pointer",
+                      borderBottom: "0.5px solid var(--border)",
+                      background: selId === i.id ? "rgba(0,119,130,.06)" : "transparent",
+                      transition: "background .1s",
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--light)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = selId === i.id ? "rgba(0,119,130,.06)" : "transparent"; }}
+                  >
+                    {p
+                      ? <img src={p} style={{ width: 32, height: 32, borderRadius: 7, objectFit: "cover", flexShrink: 0, border: "1px solid var(--border)" }} alt="" />
+                      : <div style={{ width: 32, height: 32, borderRadius: 7, background: "rgba(0,119,130,.1)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>📦</div>
+                    }
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i.name}</div>
+                      <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 1 }}>
+                        {i.purchase_price ? `€${fmt(Number(i.purchase_price))}` : ""}
+                        {i.size ? ` · ${i.size}` : ""}
+                        {d !== null ? ` · ${d} gg` : ""}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Preview row */}
-        {item ? (
+        {item && (
           <div style={{
-            display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
+            display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
             background: "var(--light)", borderRadius: 10,
           }}>
             {photo
-              ? <img src={photo} style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid var(--border)" }} alt="" />
-              : <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(0,119,130,.12)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📦</div>
+              ? <img src={photo} style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid var(--border)" }} alt="" />
+              : <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(0,119,130,.12)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>📦</div>
             }
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-              <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 2 }}>
-                {cost > 0 && `€${fmt(cost)} acquisto`}{days !== null ? ` · in magazzino ${days} gg` : ""}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+              <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 1 }}>
+                {cost > 0 ? `€${fmt(cost)} acquisto` : ""}
+                {days !== null ? ` · in magazzino ${days} gg` : ""}
               </div>
             </div>
-          </div>
-        ) : (
-          <div style={{ height: 54, borderRadius: 10, background: "var(--light)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 12, color: "var(--slate)" }}>Nessun articolo selezionato</span>
           </div>
         )}
 
@@ -169,11 +228,11 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
           onClick={openModal}
           disabled={!item}
           style={{
-            width: "100%", padding: "10px", borderRadius: 10,
-            border: `1px solid ${item ? "var(--border)" : "var(--border)"}`,
+            width: "100%", padding: "9px", borderRadius: 10,
+            border: "1px solid var(--border)",
             background: "var(--white)", color: item ? "var(--ink)" : "var(--slate)",
             fontSize: 13, fontWeight: 600, fontFamily: "inherit",
-            cursor: item ? "pointer" : "not-allowed", transition: "all .15s",
+            cursor: item ? "pointer" : "not-allowed", transition: "border-color .15s",
           }}
           onMouseEnter={e => { if (item) (e.currentTarget as HTMLButtonElement).style.borderColor = TEAL; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; }}
@@ -199,8 +258,7 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
             .vo-slider::-webkit-slider-thumb {
               -webkit-appearance: none; width: 18px; height: 18px;
               border-radius: 50%; background: ${TEAL};
-              border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.2);
-              cursor: pointer;
+              border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.2); cursor: pointer;
             }
             .vo-slider::-moz-range-thumb {
               width: 18px; height: 18px; border-radius: 50%;
@@ -220,7 +278,6 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
                 width: "100%", maxWidth: 440,
                 maxHeight: "90vh", overflowY: "auto",
                 boxShadow: "0 32px 80px rgba(0,0,0,.20)",
-                display: "flex", flexDirection: "column",
               }}
             >
               {/* Header */}
@@ -229,7 +286,7 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
                   <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)" }}>Valuta offerta</div>
                   <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 2 }}>Analisi P&amp;L in tempo reale</div>
                 </div>
-                <button onClick={() => setIsOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--slate)", padding: 4, borderRadius: 8, lineHeight: 1 }}>
+                <button onClick={() => setIsOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--slate)", padding: 4, borderRadius: 8 }}>
                   <X size={16} />
                 </button>
               </div>
@@ -263,10 +320,10 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
                       value: days !== null ? `${days} gg` : "—",
                       color: days === null ? "var(--ink)" : days > 60 ? "#FF4D4D" : days > 30 ? "#f5a623" : "var(--ink)",
                     },
-                    { label: "PREZZO LISTINO",  value: listino > 0 ? `€${fmt(listino)}` : "—", color: "var(--ink)" },
+                    { label: "PREZZO LISTINO", value: listino > 0 ? `€${fmt(listino)}` : "—", color: "var(--ink)" },
                   ].map(cell => (
                     <div key={cell.label} style={{ padding: "9px 12px", background: "var(--light)", borderRadius: 10 }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: "var(--slate)", letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 4 }}>{cell.label}</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: "var(--slate)", letterSpacing: ".06em", textTransform: "uppercase" as const, marginBottom: 4 }}>{cell.label}</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: cell.color }}>{cell.value}</div>
                     </div>
                   ))}
@@ -290,23 +347,20 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
 
                 {/* Slider */}
                 <div>
-                  <div style={{ position: "relative", paddingBottom: 4 }}>
-                    <input
-                      type="range"
-                      className="vo-slider"
-                      min={1}
-                      max={sliderMax}
-                      step={0.5}
-                      value={sliderVal}
-                      onChange={e => syncSlider(parseFloat(e.target.value))}
-                      style={{
-                        background: `linear-gradient(to right, ${TEAL} 0%, ${TEAL} ${(sliderVal - 1) / (sliderMax - 1) * 100}%, var(--border) ${(sliderVal - 1) / (sliderMax - 1) * 100}%, var(--border) 100%)`,
-                      }}
-                    />
-                  </div>
+                  <input
+                    type="range"
+                    className="vo-slider"
+                    min={1}
+                    max={sliderMax}
+                    step={0.5}
+                    value={sliderVal}
+                    onChange={e => syncSlider(parseFloat(e.target.value))}
+                    style={{
+                      background: `linear-gradient(to right, ${TEAL} 0%, ${TEAL} ${(sliderVal - 1) / (sliderMax - 1) * 100}%, var(--border) ${(sliderVal - 1) / (sliderMax - 1) * 100}%, var(--border) 100%)`,
+                    }}
+                  />
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--slate)", marginTop: 2 }}>
-                    <span>€1</span>
-                    <span>€{fmt(sliderMax)}</span>
+                    <span>€1</span><span>€{fmt(sliderMax)}</span>
                   </div>
                 </div>
 
@@ -318,7 +372,6 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
                       {marginPct >= 0 ? "+" : ""}{marginPct}% · {profit >= 0 ? "+" : ""}€{fmt(profit)}
                     </span>
                   </div>
-                  {/* Progress bar */}
                   <div style={{ height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${barPct * 100}%`, background: mColor, borderRadius: 3, transition: "width .15s, background .15s" }} />
                   </div>
@@ -326,34 +379,6 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
                     <span style={{ fontSize: 11, color: "var(--slate)" }}>Costo €{fmt(cost)} · Offerta €{fmt(offerNum)}</span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: mColor }}>{mLabel}</span>
                   </div>
-                </div>
-
-                {/* Buttons */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 4 }}>
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    style={{ padding: "11px 6px", borderRadius: 10, border: "1.5px solid rgba(255,77,77,.5)", background: "transparent", color: "#FF4D4D", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,77,77,.08)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                  >
-                    Rifiuta
-                  </button>
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    style={{ padding: "11px 6px", borderRadius: 10, border: `1.5px solid ${TEAL}`, background: "transparent", color: TEAL, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,119,130,.08)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                  >
-                    Controfferta
-                  </button>
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    style={{ padding: "11px 6px", borderRadius: 10, border: "none", background: TEAL, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "opacity .15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = ".85"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
-                  >
-                    Accetta
-                  </button>
                 </div>
 
               </div>

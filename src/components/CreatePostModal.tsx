@@ -153,7 +153,7 @@ export default function CreatePostModal({ prefill, onClose, onSuccess }: Props) 
             </select>
           </div>
           <div>
-            <label style={S.label}>Taglia (opzionale)</label>
+            <label style={S.label}>Taglia</label>
             <input value={saleSize} onChange={e => setSaleSize(e.target.value)} style={S.input} placeholder="Es. M, 42, XL" />
           </div>
         </div>

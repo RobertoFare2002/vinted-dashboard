@@ -1512,28 +1512,14 @@ export default function DashboardCharts({
 
           {/* Card sotto attività recenti — desktop 3-col, mobile 1-col */}
           {activeView === "vendite" && (
-            <div className="fx-bottom-cards" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+            <div className="fx-bottom-cards" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 12 }}>
               <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} />
-              <div style={{ background: "var(--white)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-              </div>
               <ValutaOffertaCard stockItems={stockItems} photoMap={photoMap} />
             </div>
           )}
           {activeView === "magazzino" && (
-            <div className="fx-bottom-cards" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+            <div className="fx-bottom-cards" style={{ flexShrink: 0, display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 12 }}>
               <AvgTicketCard sales={allSales} selectedProfileId={selectedProfileId} defaultView="acquisto" />
-              <div style={{ background: "var(--white)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-              </div>
               <ValutaOffertaCard stockItems={stockItems} photoMap={photoMap} />
             </div>
           )}
