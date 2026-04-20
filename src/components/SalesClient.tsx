@@ -67,10 +67,10 @@ export default function SalesClient({ initialSales, templates, photoMap, profile
     return list;
   }, [initialSales, filter, search, profileMap]);
 
-  const revenue = initialSales.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
-  const costs   = initialSales.reduce((a, s) => a + Number(s.cost ?? 0), 0);
+  const revenue = sales.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const costs   = sales.reduce((a, s) => a + Number(s.cost ?? 0), 0);
   const profit  = revenue - costs;
-  const pending = initialSales.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const pending = sales.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
 
   function handleDelete(id: string) { setConfirmDelete(null); setActionId(id); startTransition(async () => { await deleteSale(id); setActionId(null); }); }
   function handleToggle(s: SaleRow) { const next = s.status === "open" ? "closed" : "open"; setActionId(s.id); startTransition(async () => { await changeSaleStatus(s.id, next as "open" | "closed"); setActionId(null); }); }

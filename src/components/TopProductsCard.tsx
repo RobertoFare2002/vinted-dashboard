@@ -55,6 +55,13 @@ function fmt(n: number) {
   return n.toLocaleString("it", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function parseRaw(raw: unknown): Record<string, unknown> {
+  if (!raw) return {};
+  if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return {}; } }
+  if (typeof raw === "object") return raw as Record<string, unknown>;
+  return {};
+}
+
 function buildRanking(sales: SaleRow[], photoMap: Record<string, string>, stockItems: StockItem[], view: ViewKey): RankedItem[] {
   const closed = sales.filter(s => {
     const name = s.item_name || s.buyer_seller || "";
@@ -108,13 +115,6 @@ function buildRanking(sales: SaleRow[], photoMap: Record<string, string>, stockI
       const key = si.name.toLowerCase().trim();
       if (!purchasedByName[key] || si.purchased_at < purchasedByName[key]) purchasedByName[key] = si.purchased_at;
     }
-  }
-
-  function parseRaw(raw: unknown): Record<string, unknown> {
-    if (!raw) return {};
-    if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return {}; } }
-    if (typeof raw === "object") return raw as Record<string, unknown>;
-    return {};
   }
 
   return closed

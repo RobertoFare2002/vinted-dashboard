@@ -9,6 +9,7 @@ type Prefill = {
   saleAmount?:   number;
   saleCost?:     number;
   salePlatform?: string;
+  saleSize?:     string;
   photoUrl?:     string;
 };
 
@@ -56,6 +57,7 @@ export default function CreatePostModal({ prefill, onClose, onSuccess }: Props) 
   const [saleAmount,   setSaleAmount]   = useState(String(prefill?.saleAmount   ?? ""));
   const [saleCost,     setSaleCost]     = useState(String(prefill?.saleCost     ?? ""));
   const [salePlatform, setSalePlatform] = useState(prefill?.salePlatform ?? "vinted");
+  const [saleSize,     setSaleSize]     = useState(prefill?.saleSize ?? "");
   const [photoUrl,     setPhotoUrl]     = useState(prefill?.photoUrl     ?? "");
   const [caption,      setCaption]      = useState("");
 
@@ -73,6 +75,7 @@ export default function CreatePostModal({ prefill, onClose, onSuccess }: Props) 
           saleAmount:   parseFloat(saleAmount)   || 0,
           saleCost:     parseFloat(saleCost)      || 0,
           salePlatform,
+          saleSize,
           photoUrl,
           caption,
         });
@@ -139,14 +142,20 @@ export default function CreatePostModal({ prefill, onClose, onSuccess }: Props) 
           </div>
         )}
 
-        <div style={S.field}>
-          <label style={S.label}>Piattaforma</label>
-          <select value={salePlatform} onChange={e => setSalePlatform(e.target.value)} style={{ ...S.input, appearance: "none" as const }}>
-            <option value="vinted">Vinted</option>
-            <option value="depop">Depop</option>
-            <option value="ebay">eBay</option>
-            <option value="altro">Altro</option>
-          </select>
+        <div style={S.grid2}>
+          <div>
+            <label style={S.label}>Piattaforma</label>
+            <select value={salePlatform} onChange={e => setSalePlatform(e.target.value)} style={{ ...S.input, appearance: "none" as const }}>
+              <option value="vinted">Vinted</option>
+              <option value="depop">Depop</option>
+              <option value="ebay">eBay</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+          <div>
+            <label style={S.label}>Taglia (opzionale)</label>
+            <input value={saleSize} onChange={e => setSaleSize(e.target.value)} style={S.input} placeholder="Es. M, 42, XL" />
+          </div>
         </div>
 
         <div style={S.field}>

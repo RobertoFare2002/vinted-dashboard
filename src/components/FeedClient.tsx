@@ -17,6 +17,7 @@ export type FeedPost = {
   sale_amount:    number | null;
   sale_cost:      number | null;
   sale_platform:  string | null;
+  sale_size:      string | null;
   photo_url:      string | null;
   caption:        string | null;
   created_at:     string;
@@ -184,6 +185,15 @@ function PostCard({
           }}>
             {post.sale_name}
           </span>
+          {post.sale_size && (
+            <span style={{
+              background: "rgba(0,119,130,0.10)", border: "1px solid rgba(0,119,130,0.25)",
+              borderRadius: 6, padding: "3px 9px",
+              fontSize: 12, fontWeight: 700, color: "#007782",
+            }}>
+              {post.sale_size}
+            </span>
+          )}
           <span style={{
             fontSize: 13, fontWeight: 800, color: "#6bb800",
           }}>€{fmt(amount)}</span>

@@ -1,9 +1,45 @@
 "use client";
-// src/components/ProfilesCard.tsx
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createProfileFromVinted, deleteProfile } from "@/app/(dashboard)/profiles/actions";
 import { Plus, X, Trash2, Loader } from "lucide-react";
+
+function VintedUmbrellaIcon({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M10 2C5.582 2 2 5.477 2 9.778h8V2z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round"
+      />
+      <path
+        d="M10 2C14.418 2 18 5.477 18 9.778H10V2z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round"
+      />
+      <line x1="10" y1="9.778" x2="10" y2="16.5" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+      <path
+        d="M10 16.5C10 17.88 8.88 18 8 18C7.12 18 6.5 17.4 6.5 16.5"
+        stroke={color} strokeWidth="1.4" strokeLinecap="round" fill="none"
+      />
+    </svg>
+  );
+}
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const GREEN    = "#007782";
 const GREEN_BG = "#f0fad0";
@@ -13,6 +49,9 @@ const BD       = "#EBEBEB";
 const LT       = "#F5F5F5";
 const W        = "#ffffff";
 const RED      = "#FF4D4D";
+
+const ORDER_KEY    = "vinted-profiles-order";
+const UMBRELLA_KEY = "vinted-profiles-umbrella";
 
 type Profile = {
   id: string;
@@ -25,47 +64,173 @@ type Props = {
   profiles: Profile[];
 };
 
+function SortableProfileItem({
+  profile,
+  isSelected,
+  umbrellaActive,
+  onSelect,
+  onDelete,
+  onToggleUmbrella,
+  isPending,
+}: {
+  profile: Profile;
+  isSelected: boolean;
+  umbrellaActive: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+  onToggleUmbrella: () => void;
+  isPending: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: profile.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    position: "relative",
+    zIndex: isDragging ? 999 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`pc-item${isSelected ? " selected" : ""}`}
+      onClick={onSelect}
+    >
+
+      {/* Avatar */}
+      {profile.avatar_url ? (
+        <img src={profile.avatar_url} alt={profile.name} className="pc-avatar" />
+      ) : (
+        <div className="pc-avatar-placeholder">👤</div>
+      )}
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span className={`pc-name${isSelected ? " selected" : ""}`}>{profile.name}</span>
+          {isSelected && <span className="pc-selected-badge">attivo</span>}
+        </div>
+        {profile.salesCount !== undefined && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path d="M1 1h1.5l1.8 5.5h5l1.2-3.5H4" stroke="#007782" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="5.5" cy="10" r="0.8" fill="#007782"/>
+              <circle cx="9" cy="10" r="0.8" fill="#007782"/>
+            </svg>
+            <span style={{ fontSize: 11, fontWeight: 500, color: "#007782" }}>
+              {profile.salesCount} {profile.salesCount === 1 ? "vendita" : "vendite"}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <button
+        className="pc-delete-btn"
+        onClick={e => { e.stopPropagation(); onDelete(); }}
+        disabled={isPending}
+        title="Elimina profilo"
+      >
+        <Trash2 size={12} />
+      </button>
+      <button
+        className={`pc-umbrella-btn${umbrellaActive ? " active" : ""}`}
+        onClick={e => { e.stopPropagation(); onToggleUmbrella(); }}
+        title={umbrellaActive ? "Disattiva ombrellone" : "Attiva ombrellone"}
+      >
+        <VintedUmbrellaIcon size={13} color={umbrellaActive ? GREEN : "currentColor"} />
+      </button>
+    </div>
+  );
+}
+
 export default function ProfilesCard({ profiles }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get("profile") ?? null;
 
-  const [showModal, setShowModal] = useState(false);
-  const [vintedUrl, setVintedUrl] = useState("");
+  const [showModal, setShowModal]   = useState(false);
+  const [vintedUrl, setVintedUrl]   = useState("");
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]           = useState<string | null>(null);
+
+  const [orderedIds, setOrderedIds]   = useState<string[]>(() => profiles.map(p => p.id));
+  const [umbrellaIds, setUmbrellaIds] = useState<Set<string>>(new Set());
+
+  // Load persisted order & umbrella from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ORDER_KEY);
+      if (saved) {
+        const parsed: string[] = JSON.parse(saved);
+        const profileIds = new Set(profiles.map(p => p.id));
+        const valid = parsed.filter(id => profileIds.has(id));
+        const added = profiles.map(p => p.id).filter(id => !valid.includes(id));
+        setOrderedIds([...valid, ...added]);
+      }
+    } catch {}
+    try {
+      const saved = localStorage.getItem(UMBRELLA_KEY);
+      if (saved) setUmbrellaIds(new Set(JSON.parse(saved)));
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync when profiles list changes (add/remove)
+  useEffect(() => {
+    setOrderedIds(prev => {
+      const profileIds = new Set(profiles.map(p => p.id));
+      const valid = prev.filter(id => profileIds.has(id));
+      const added = profiles.map(p => p.id).filter(id => !valid.includes(id));
+      return [...valid, ...added];
+    });
+  }, [profiles]);
+
+  const orderedProfiles = orderedIds
+    .map(id => profiles.find(p => p.id === id))
+    .filter(Boolean) as Profile[];
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setOrderedIds(prev => {
+      const next = arrayMove(prev, prev.indexOf(active.id as string), prev.indexOf(over.id as string));
+      localStorage.setItem(ORDER_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function toggleUmbrella(id: string) {
+    setUmbrellaIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      localStorage.setItem(UMBRELLA_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   function selectProfile(id: string) {
     const params = new URLSearchParams(searchParams.toString());
-    if (selectedId === id) {
-      params.delete("profile"); // deseleziona
-    } else {
-      params.set("profile", id);
-    }
+    if (selectedId === id) params.delete("profile"); else params.set("profile", id);
     router.push(`/?${params.toString()}`);
   }
 
-  function openModal() {
-    setVintedUrl("");
-    setError(null);
-    setShowModal(true);
-  }
-
-  function closeModal() {
-    setShowModal(false);
-    setError(null);
-    setVintedUrl("");
-  }
+  function openModal() { setVintedUrl(""); setError(null); setShowModal(true); }
+  function closeModal() { setShowModal(false); setError(null); setVintedUrl(""); }
 
   function handleCreate() {
-    if (!vintedUrl.trim()) {
-      setError("Inserisci l'URL del profilo Vinted.");
-      return;
-    }
-    if (!vintedUrl.includes("vinted.")) {
-      setError("L'URL non sembra essere un profilo Vinted valido.");
-      return;
-    }
+    if (!vintedUrl.trim()) { setError("Inserisci l'URL del profilo Vinted."); return; }
+    if (!vintedUrl.includes("vinted.")) { setError("L'URL non sembra essere un profilo Vinted valido."); return; }
     setError(null);
     startTransition(async () => {
       try {
@@ -83,7 +248,6 @@ export default function ProfilesCard({ profiles }: Props) {
     startTransition(async () => {
       try {
         await deleteProfile(profileId);
-        // Se era selezionato, rimuovi il filtro
         if (selectedId === profileId) {
           const params = new URLSearchParams(searchParams.toString());
           params.delete("profile");
@@ -103,57 +267,57 @@ export default function ProfilesCard({ profiles }: Props) {
         .pc-item {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           padding: 8px 10px;
           border-radius: 12px;
           margin-bottom: 4px;
-          cursor: pointer;
+          cursor: grab;
           transition: background .15s;
           border: 1.5px solid transparent;
         }
+        .pc-item:active { cursor: grabbing; }
         .pc-item:hover { background: ${LT}; }
-        .pc-item.selected {
-          background: ${GREEN_BG};
-          border-color: #6bb800;
-        }
+        .pc-item.selected { background: ${GREEN_BG}; border-color: #6bb800; }
         .pc-avatar {
-          width: 38px; height: 38px;
-          border-radius: 12px;
-          object-fit: cover;
-          flex-shrink: 0;
-          border: 1px solid ${BD};
+          width: 38px; height: 38px; border-radius: 12px;
+          object-fit: cover; flex-shrink: 0; border: 1px solid ${BD};
         }
         .pc-avatar-placeholder {
-          width: 38px; height: 38px;
-          border-radius: 12px;
-          background: ${LT};
-          border: 1px solid ${BD};
+          width: 38px; height: 38px; border-radius: 12px;
+          background: ${LT}; border: 1px solid ${BD};
           display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-          font-size: 16px;
+          flex-shrink: 0; font-size: 16px;
         }
         .pc-name {
           font-size: 13px; font-weight: 600; color: ${INK};
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-          display: block;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;
         }
         .pc-name.selected { color: #6bb800; }
         .pc-selected-badge {
-          font-size: 10px; font-weight: 700;
-          color: #6bb800; background: transparent;
-          padding: 0; border-radius: 0;
-          border: none;
-          white-space: nowrap;
+          font-size: 10px; font-weight: 700; color: #6bb800; background: transparent;
+          padding: 0; border: none; white-space: nowrap;
           display: inline-flex; align-items: center; gap: 4px;
         }
         .pc-selected-badge::before {
-          content: '';
-          display: inline-block;
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: #007782;
-          flex-shrink: 0;
+          content: ''; display: inline-block;
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #007782; flex-shrink: 0;
         }
+        .pc-umbrella-badge {
+          display: inline-flex; align-items: center;
+          color: ${GREEN}; flex-shrink: 0;
+        }
+        .pc-umbrella-btn {
+          padding: 4px 6px; border-radius: 8px;
+          border: 1px solid transparent; background: transparent;
+          cursor: pointer; color: ${SL};
+          transition: all .15s; display: flex; align-items: center;
+          flex-shrink: 0; opacity: 0;
+        }
+        .pc-item:hover .pc-umbrella-btn { opacity: 1; }
+        .pc-umbrella-btn:hover { border-color: ${GREEN}; color: ${GREEN}; background: rgba(0,119,130,.08); }
+        .pc-umbrella-btn.active { color: ${GREEN}; opacity: 1 !important; }
+        .pc-umbrella-btn.active:hover { border-color: ${GREEN}; background: rgba(0,119,130,.08); }
         .pc-delete-btn {
           padding: 4px 6px; border-radius: 8px;
           border: 1px solid transparent; background: transparent;
@@ -168,19 +332,17 @@ export default function ProfilesCard({ profiles }: Props) {
           padding: 6px 12px; border-radius: 999px; border: none;
           background: #007782; color: #ffffff;
           font-size: 12px; font-weight: 600;
-          cursor: pointer; font-family: inherit;
-          transition: opacity .15s;
+          cursor: pointer; font-family: inherit; transition: opacity .15s;
         }
         .pc-create-btn:hover { opacity: .85; }
         .pc-overlay {
-          position: fixed; inset: 0;
-          background: rgba(0,0,0,.45);
+          position: fixed; inset: 0; background: rgba(0,0,0,.45);
           display: flex; align-items: center; justify-content: center;
           z-index: 9999; padding: 16px;
         }
         .pc-modal {
-          background: ${W}; border-radius: 16px;
-          padding: 24px; width: 100%; max-width: 420px;
+          background: ${W}; border-radius: 16px; padding: 24px;
+          width: 100%; max-width: 420px;
           box-shadow: 0 20px 60px rgba(0,0,0,.18);
         }
         .pc-modal-title { font-size: 16px; font-weight: 700; color: ${INK}; margin-bottom: 6px; }
@@ -235,7 +397,6 @@ export default function ProfilesCard({ profiles }: Props) {
         </button>
       </div>
 
-      {/* Lista profili o stato vuoto */}
       {profiles.length === 0 ? (
         <div className="pc-empty">
           <div style={{ fontSize: 22 }}>👤</div>
@@ -246,48 +407,22 @@ export default function ProfilesCard({ profiles }: Props) {
         </div>
       ) : (
         <>
-          {profiles.map(p => {
-            const isSelected = selectedId === p.id;
-            return (
-              <div
-                key={p.id}
-                className={`pc-item${isSelected ? " selected" : ""}`}
-                onClick={() => selectProfile(p.id)}
-              >
-                {p.avatar_url ? (
-                  <img src={p.avatar_url} alt={p.name} className="pc-avatar" />
-                ) : (
-                  <div className="pc-avatar-placeholder">👤</div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span className={`pc-name${isSelected ? " selected" : ""}`}>{p.name}</span>
-                    {isSelected && <span className="pc-selected-badge">attivo</span>}
-                  </div>
-                  {p.salesCount !== undefined && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
-                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                        <path d="M1 1h1.5l1.8 5.5h5l1.2-3.5H4" stroke="#007782" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="5.5" cy="10" r="0.8" fill="#007782"/>
-                        <circle cx="9" cy="10" r="0.8" fill="#007782"/>
-                      </svg>
-                      <span style={{ fontSize: 11, fontWeight: 500, color: "#007782" }}>
-                        {p.salesCount} {p.salesCount === 1 ? "vendita" : "vendite"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="pc-delete-btn"
-                  onClick={e => { e.stopPropagation(); handleDelete(p.id, p.name); }}
-                  disabled={isPending}
-                  title="Elimina profilo"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            );
-          })}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+              {orderedProfiles.map(p => (
+                <SortableProfileItem
+                  key={p.id}
+                  profile={p}
+                  isSelected={selectedId === p.id}
+                  umbrellaActive={umbrellaIds.has(p.id)}
+                  onSelect={() => selectProfile(p.id)}
+                  onDelete={() => handleDelete(p.id, p.name)}
+                  onToggleUmbrella={() => toggleUmbrella(p.id)}
+                  isPending={isPending}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           <div className="pc-filter-hint">
             {selectedId ? "Clicca di nuovo per rimuovere il filtro" : "Clicca un profilo per filtrare la dashboard"}
           </div>

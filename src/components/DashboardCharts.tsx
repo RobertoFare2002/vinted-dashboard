@@ -23,6 +23,9 @@ import SalesChartCard, { PeriodState } from "@/components/SalesChartCard";
 import ConversionRateCard from "@/components/ConversionRateCard";
 import TopProductsCard from "@/components/TopProductsCard";
 import AvgTicketCard from "@/components/AvgTicketCard";
+import ValutaOffertaCard from "@/components/ValutaOffertaCard";
+import dynamic from "next/dynamic";
+const CreatePostModal = dynamic(() => import("@/components/CreatePostModal"), { ssr: false });
 
 /* ── palette ── */
 const GREEN    = "#007782";
@@ -102,6 +105,8 @@ interface SaleRow {
   item_name?: string;
   profile_id?: string;
   template_id_ext?: string;
+  raw_data?: Record<string, unknown> | null;
+  platform?: string | null;
 }
 
 interface StockItem {
@@ -253,6 +258,7 @@ export default function DashboardCharts({
   const [modalStock,   setModalStock]   = useState<StockItem | null>(null);
   const [modalSell,    setModalSell]    = useState<StockItem | null>(null);
   const [modalBundle,  setModalBundle]  = useState<string | null>(null); // preselected stockId
+  const [publishCtxSale, setPublishCtxSale] = useState<SaleRow | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const salesListRef  = useRef<HTMLDivElement>(null);
   const stockListRef  = useRef<HTMLDivElement>(null);
@@ -378,12 +384,23 @@ export default function DashboardCharts({
     return (i.name || "").toLowerCase().includes(stockSearch.toLowerCase());
   });
 
-  // Spotlight — calcolato sulle vendite filtrate per periodo
-  const spotRevenue  = periodFilteredSales.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
-  const spotPending  = periodFilteredSales.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
-  const spotCost     = periodFilteredSales.reduce((a, s) => a + Number(s.cost ?? 0), 0);
+  // Spotlight — calcolato sulle vendite filtrate per periodo + search/status attivi
+  const spotRevenue  = filteredSales.filter(s => s.status === "closed").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const spotPending  = filteredSales.filter(s => s.status === "open").reduce((a, s) => a + Number(s.amount ?? 0), 0);
+  const spotCost     = filteredSales.reduce((a, s) => a + Number(s.cost ?? 0), 0);
   const spotProfit   = spotRevenue + spotPending - spotCost;
   const spotMargin   = spotCost > 0 ? Math.round(((spotRevenue + spotPending - spotCost) / spotCost) * 100) : 0;
+
+  function countItems(list: typeof filteredSales): number {
+    return list.reduce((n, s) => {
+      try {
+        const rd = s.raw_data && typeof s.raw_data === "object" ? s.raw_data as Record<string,unknown> : null;
+        if (rd?.bulk === true && typeof rd?.bulk_size === "number" && (rd.bulk_size as number) > 1)
+          return n + (rd.bulk_size as number);
+      } catch {}
+      return n + 1;
+    }, 0);
+  }
 
   const MONTH_NAMES_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
   const periodLabel = (() => {
@@ -398,9 +415,9 @@ export default function DashboardCharts({
 
   const spotlightData = {
     profit:  { label: `Profitto netto · ${periodLabel}`,   value: spotProfit,            sub: `${spotMargin >= 0 ? "+" : ""}${spotMargin}% margine`,  color: spotProfit >= 0 ? "#6bb800" : RED,  subColor: spotProfit >= 0 ? "#6bb800" : RED },
-    revenue: { label: `Ricavi totali · ${periodLabel}`,    value: spotRevenue + spotPending, sub: `${periodFilteredSales.filter(s=>s.status==="closed").length} chiuse · ${periodFilteredSales.filter(s=>s.status==="open").length} aperte`, color: BLU, subColor: BLU },
-    cost:    { label: `Costi acquisti · ${periodLabel}`,   value: spotCost,              sub: `${periodFilteredSales.length} vendite totali`,                 color: RED,                             subColor: RED },
-    pending: { label: `In sospeso · ${periodLabel}`,       value: spotPending,           sub: `${periodFilteredSales.filter(s=>s.status==="open").length} vendite aperte`,                     color: AMB,                             subColor: AMB },
+    revenue: { label: `Ricavi totali · ${periodLabel}`,    value: spotRevenue + spotPending, sub: `${countItems(filteredSales.filter(s=>s.status==="closed"))} chiuse · ${countItems(filteredSales.filter(s=>s.status==="open"))} aperte`, color: BLU, subColor: BLU },
+    cost:    { label: `Costi acquisti · ${periodLabel}`,   value: spotCost,              sub: `${countItems(filteredSales)} articoli totali`,                 color: RED,                             subColor: RED },
+    pending: { label: `In sospeso · ${periodLabel}`,       value: spotPending,           sub: `${countItems(filteredSales.filter(s=>s.status==="open"))} articoli in attesa`,                     color: AMB,                             subColor: AMB },
   };
   const spot = spotlightData[spotlightKey];
 
@@ -1504,13 +1521,7 @@ export default function DashboardCharts({
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
                 <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
               </div>
-              <div style={{ background: "var(--white)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-              </div>
+              <ValutaOffertaCard stockItems={stockItems} photoMap={photoMap} />
             </div>
           )}
           {activeView === "magazzino" && (
@@ -1523,13 +1534,7 @@ export default function DashboardCharts({
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
                 <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
               </div>
-              <div style={{ background: "var(--white)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: "18px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 100 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#CCCCCC" strokeWidth="1.3"/><path d="M8 5v3.5M8 10.5v.5" stroke="#CCCCCC" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Prossimamente</div>
-                <div style={{ fontSize: 11, color: "var(--slate)", textAlign: "center" }}>Nuove funzionalità in arrivo</div>
-              </div>
+              <ValutaOffertaCard stockItems={stockItems} photoMap={photoMap} />
             </div>
           )}
 
@@ -1654,6 +1659,12 @@ export default function DashboardCharts({
                       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 11.5V14h2.5l7.1-7.1-2.5-2.5L2 11.5z" stroke="#185FA5" strokeWidth="1.3" strokeLinejoin="round"/><path d="M11.5 2.5l2 2" stroke="#185FA5" strokeWidth="1.3" strokeLinecap="round"/></svg>
                     </div>
                     <span className="lp-menu-action-label">Modifica</span>
+                  </button>
+                  <button className="lp-menu-action" onClick={() => { closeCtxMenu(); setPublishCtxSale(s); }}>
+                    <div className="lp-icon" style={{ background: "rgba(0,119,130,.1)" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#007782" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <span className="lp-menu-action-label" style={{ color: "#007782", fontWeight: 700 }}>Pubblica</span>
                   </button>
                   <button className="lp-menu-action" onClick={() => {
                     closeCtxMenu();
@@ -1784,6 +1795,26 @@ export default function DashboardCharts({
           onClose={() => { setModalBundle(null); window.location.reload(); }}
         />
       )}
+      {publishCtxSale && (() => {
+        const s = publishCtxSale;
+        const si = s.template_id_ext
+          ? stockItems.find(i => i.template_id_ext === s.template_id_ext)
+          : stockItems.find(i => i.id === (s.raw_data?.stock_id as string | undefined));
+        return (
+          <CreatePostModal
+            prefill={{
+              saleName:     s.item_name || s.buyer_seller || "",
+              saleAmount:   Number(s.amount ?? 0),
+              saleCost:     Number(s.cost ?? 0),
+              salePlatform: s.platform ?? "vinted",
+              saleSize:     si?.size ?? "",
+              photoUrl:     s.template_id_ext ? (photoMap[s.template_id_ext] ?? "") : "",
+            }}
+            onClose={() => setPublishCtxSale(null)}
+            onSuccess={() => setPublishCtxSale(null)}
+          />
+        );
+      })()}
     </>
   );
 }

@@ -18,6 +18,7 @@ export async function createFeedPost(input: {
   saleAmount:   number;
   saleCost:     number;
   salePlatform: string;
+  saleSize:     string;
   photoUrl:     string;
   caption:      string;
 }) {
@@ -37,6 +38,7 @@ export async function createFeedPost(input: {
     sale_amount:    Number(input.saleAmount)  || 0,
     sale_cost:      Number(input.saleCost)    || 0,
     sale_platform:  input.salePlatform        || null,
+    sale_size:      input.saleSize.trim()     || null,
     photo_url:      input.photoUrl.trim()     || null,
     caption:        input.caption.trim()      || null,
     created_at:     new Date().toISOString(),

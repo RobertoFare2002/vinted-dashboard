@@ -31,6 +31,54 @@ const TAG_META: Record<Tag, { label: string; bg: string; color: string }> = {
 
 const VERSIONS: Version[] = [
   {
+    version: "1.3.0",
+    date: "20 Aprile 2026",
+    changes: [
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+        iconBg: "#E1F5EE",
+        title: "Riordinamento profili",
+        desc: "Trascina i profili per riordinarli come preferisci. L'ordine viene salvato automaticamente.",
+        tag: "nuovo",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2C5.582 2 2 5.477 2 9.778h8V2z" stroke="#0F6E56" strokeWidth="1.4" strokeLinejoin="round"/><path d="M10 2C14.418 2 18 5.477 18 9.778H10V2z" stroke="#0F6E56" strokeWidth="1.4" strokeLinejoin="round"/><line x1="10" y1="9.778" x2="10" y2="16.5" stroke="#0F6E56" strokeWidth="1.4" strokeLinecap="round"/><path d="M10 16.5C10 17.88 8.88 18 8 18C7.12 18 6.5 17.4 6.5 16.5" stroke="#0F6E56" strokeWidth="1.4" strokeLinecap="round" fill="none"/></svg>,
+        iconBg: "#E1F5EE",
+        title: "Toggle ombrellone sui profili",
+        desc: "Attiva la modalità vacanze su ogni profilo con un click. L'icona appare sempre visibile quando attiva.",
+        tag: "nuovo",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
+        iconBg: "#E6F1FB",
+        title: "Notifiche nuovi post nel feed",
+        desc: "Un pallino rosso appare sul tab Feed quando ci sono nuovi post pubblicati da altri utenti.",
+        tag: "nuovo",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>,
+        iconBg: "#FAEEDA",
+        title: "Taglia nei post del feed",
+        desc: "Aggiungi la taglia dell'articolo quando pubblichi una vendita nel feed.",
+        tag: "nuovo",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+        iconBg: "#FAEEDA",
+        title: "Card KPI reattive alla ricerca",
+        desc: "Ricavi, Costi, Profitto e In sospeso si aggiornano in tempo reale mentre cerchi nella tabella.",
+        tag: "migliorato",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
+        iconBg: "#FAEEDA",
+        title: "Miglioramenti navigazione mobile",
+        desc: "Tab bar e header mobile ottimizzati con layout più compatto e scroll migliorato.",
+        tag: "migliorato",
+      },
+    ],
+  },
+  {
     version: "1.2.0",
     date: "4 Aprile 2026",
     changes: [
@@ -172,7 +220,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
               </svg>
               Scopri le novità
             </div>
-            <div className="cl-title">Aggiornamento v{VERSIONS[0].version}</div>
+            <div className="cl-title">Cosa c&apos;è di nuovo · v{VERSIONS[0].version}</div>
             <div className="cl-date">{VERSIONS[0].date}</div>
           </div>
 
