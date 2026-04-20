@@ -39,7 +39,8 @@ function marginLabel(pct: number) {
   if (pct < 0)   return "Sotto costo";
   if (pct < 50)  return "Accettabile";
   if (pct < 100) return "Buono";
-  return "Ottimo";
+  if (pct < 200) return "Ottimo";
+  return "Hai spaccato";
 }
 
 function marginColor(pct: number) {
@@ -49,13 +50,15 @@ function marginColor(pct: number) {
 }
 
 export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) {
-  const [query,     setQuery]     = useState("");
-  const [showDrop,  setShowDrop]  = useState(false);
-  const [selId,     setSelId]     = useState("");
-  const [isOpen,    setIsOpen]    = useState(false);
-  const [offerVal,  setOfferVal]  = useState("");
-  const [sliderVal, setSliderVal] = useState(1);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [query,        setQuery]        = useState("");
+  const [showDrop,     setShowDrop]     = useState(false);
+  const [selId,        setSelId]        = useState("");
+  const [isOpen,       setIsOpen]       = useState(false);
+  const [offerVal,     setOfferVal]     = useState("");
+  const [sliderVal,    setSliderVal]    = useState(1);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const wrapRef  = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const available = useMemo(
     () => stockItems.filter(i => i.status === "available" || i.status === "in_stock"),
@@ -83,7 +86,6 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
   const mColor    = marginColor(marginPct);
   const mLabel    = marginLabel(marginPct);
 
-  // Chiudi dropdown se click fuori
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setShowDrop(false);
@@ -92,10 +94,31 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Reset focused index when results change
+  useEffect(() => { setFocusedIndex(-1); }, [results]);
+
   function selectItem(id: string, name: string) {
     setSelId(id);
     setQuery(name);
     setShowDrop(false);
+    setFocusedIndex(-1);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!showDrop || results.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusedIndex(i => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusedIndex(i => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const target = focusedIndex >= 0 ? results[focusedIndex] : results[0];
+      if (target) selectItem(target.id ?? "", target.name ?? "");
+    } else if (e.key === "Escape") {
+      setShowDrop(false);
+    }
   }
 
   function openModal() {
@@ -119,6 +142,25 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
 
   return (
     <>
+      <style>{`
+        .vo-search-wrap {
+          display: flex; align-items: center; gap: 8px;
+          padding: 8px 12px; border: 1px solid var(--border);
+          border-radius: 12px; background: var(--light);
+          transition: border-color .15s;
+        }
+        .vo-search-wrap:focus-within { border-color: ${TEAL}; }
+        .vo-search-wrap input {
+          border: none; outline: none; font-size: 13px;
+          font-family: inherit; color: var(--ink); background: transparent; width: 100%;
+        }
+        .vo-search-wrap input::placeholder { color: #b0b0b0; }
+        .vo-result-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; border-bottom: 0.5px solid var(--border); transition: background .1s; }
+        .vo-result-item:last-child { border-bottom: none; }
+        .vo-result-item:hover, .vo-result-item.focused { background: var(--light); }
+        .vo-result-item.selected { background: rgba(0,119,130,.06); }
+      `}</style>
+
       {/* ── CARD ── */}
       <div style={{
         background: "var(--white)",
@@ -138,22 +180,18 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
 
         {/* Search bar */}
         <div ref={wrapRef} style={{ position: "relative" }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "7px 10px", borderRadius: 10,
-            border: `1px solid ${showDrop ? TEAL : "var(--border)"}`,
-            background: "var(--light)", transition: "border-color .15s",
-          }}>
-            <Search size={13} color="var(--slate)" style={{ flexShrink: 0 }} />
+          <div className="vo-search-wrap">
+            <Search size={13} color="#b0b0b0" style={{ flexShrink: 0 }} />
             <input
+              ref={inputRef}
               value={query}
               onChange={e => { setQuery(e.target.value); setShowDrop(true); if (!e.target.value) setSelId(""); }}
               onFocus={() => setShowDrop(true)}
+              onKeyDown={handleKeyDown}
               placeholder="Cerca articolo dal magazzino…"
-              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12, color: "var(--ink)", fontFamily: "inherit" }}
             />
             {query && (
-              <button onClick={() => { setQuery(""); setSelId(""); setShowDrop(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--slate)", padding: 0, lineHeight: 1 }}>
+              <button onClick={() => { setQuery(""); setSelId(""); setShowDrop(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#b0b0b0", padding: 0, lineHeight: 1 }}>
                 <X size={12} />
               </button>
             )}
@@ -167,22 +205,17 @@ export default function ValutaOffertaCard({ stockItems, photoMap = {} }: Props) 
               border: "1px solid var(--border)", boxShadow: "0 8px 24px rgba(0,0,0,.10)",
               overflow: "hidden", maxHeight: 220, overflowY: "auto",
             }}>
-              {results.map(i => {
+              {results.map((i, idx) => {
                 const p = i.template_id_ext ? (photoMap[i.template_id_ext] ?? null) : null;
                 const d = daysInStock(i.purchased_at);
+                const isFocused = idx === focusedIndex;
+                const isSelected = selId === i.id;
                 return (
                   <div
                     key={i.id}
+                    className={`vo-result-item${isFocused ? " focused" : ""}${isSelected ? " selected" : ""}`}
                     onMouseDown={() => selectItem(i.id ?? "", i.name ?? "")}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "8px 12px", cursor: "pointer",
-                      borderBottom: "0.5px solid var(--border)",
-                      background: selId === i.id ? "rgba(0,119,130,.06)" : "transparent",
-                      transition: "background .1s",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--light)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = selId === i.id ? "rgba(0,119,130,.06)" : "transparent"; }}
+                    onMouseEnter={() => setFocusedIndex(idx)}
                   >
                     {p
                       ? <img src={p} style={{ width: 32, height: 32, borderRadius: 7, objectFit: "cover", flexShrink: 0, border: "1px solid var(--border)" }} alt="" />

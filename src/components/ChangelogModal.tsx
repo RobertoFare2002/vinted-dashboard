@@ -31,6 +31,40 @@ const TAG_META: Record<Tag, { label: string; bg: string; color: string }> = {
 
 const VERSIONS: Version[] = [
   {
+    version: "1.4.0",
+    date: "20 Aprile 2026",
+    changes: [
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>,
+        iconBg: "#E1F5EE",
+        title: "Card Valuta offerta",
+        desc: "Cerca un articolo dal magazzino e analizza in tempo reale qualsiasi offerta ricevuta: margine %, profitto, e valutazione intelligente con slider.",
+        tag: "nuovo",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
+        iconBg: "#E1F5EE",
+        title: "Pubblica dal menu vendite",
+        desc: "Nuova voce "Pubblica" nel menu contestuale di ogni vendita: apre il modal feed con taglia già compilata automaticamente.",
+        tag: "nuovo",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>,
+        iconBg: "#FAEEDA",
+        title: "Navigazione con freccette nella ricerca",
+        desc: "Nella card Valuta offerta puoi scorrere i risultati con ↑↓ e confermare con Invio, senza usare il mouse.",
+        tag: "migliorato",
+      },
+      {
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+        iconBg: "#FAEEDA",
+        title: "Valutazione "Hai spaccato"",
+        desc: "Quando il margine supera il 200%, la valutazione dell'offerta mostra "Hai spaccato" invece di "Ottimo".",
+        tag: "migliorato",
+      },
+    ],
+  },
+  {
     version: "1.3.0",
     date: "20 Aprile 2026",
     changes: [
