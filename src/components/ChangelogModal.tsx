@@ -58,8 +58,8 @@ const VERSIONS: Version[] = [
       {
         icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
         iconBg: "#FAEEDA",
-        title: "Valutazione "Hai spaccato"",
-        desc: "Quando il margine supera il 200%, la valutazione dell'offerta mostra "Hai spaccato" invece di "Ottimo".",
+        title: "Valutazione Hai spaccato",
+        desc: "Quando il margine supera il 200%, la valutazione dell'offerta mostra Hai spaccato invece di Ottimo.",
         tag: "migliorato",
       },
     ],
